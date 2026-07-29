@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>待办清单 — 融合方案：分组 + 卡片</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, system-ui, 'Segoe UI', sans-serif;
+      background: #FAFAF9;
+      color: #1C1917;
+      line-height: 1.5;
+      min-height: 100dvh;
+      display: flex;
+      justify-content: center;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 480px;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      padding: 0 16px;
+    }
+
+    /* 顶部标题区 */
+    .header {
+      padding: 28px 0 8px;
+    }
+
+    .header h1 {
+      font-size: 26px;
+      font-weight: 700;
+      color: #1C1917;
+    }
+
+    .header .count {
+      font-size: 13px;
+      color: #78716C;
+      margin-top: 2px;
+    }
+
+    /* 筛选栏 — 底线高亮（来自 A） */
+    .filters {
+      display: flex;
+      gap: 0;
+      padding: 8px 0 12px;
+      border-bottom: 1px solid #E7E5E4;
+    }
+
+    .filters button {
+      background: none;
+      border: none;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #78716C;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all 0.2s ease-out;
+    }
+
+    .filters button:hover {
+      color: #1C1917;
+    }
+
+    .filters button.active {
+      color: #2563EB;
+      border-bottom-color: #2563EB;
+    }
+
+    /* 任务分组容器（来自 C） */
+    .task-groups {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 12px 0 16px;
+      overflow-y: auto;
+    }
+
+    .group-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #A8A29E;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 0 4px 4px;
+    }
+
+    .group-items {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    /* 任务卡片（来自 B） */
+    .task-item {
+      background: #FFFFFF;
+      border-radius: 12px;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+      cursor: pointer;
+      transition: all 0.2s ease-out;
+      position: relative;
+    }
+
+    .task-item:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transform: translateY(-1px);
+    }
+
+    .task-item.completed {
+      opacity: 0.55;
+    }
+
+    /* 圆圈 — 绿色完成态 */
+    .checkbox {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #D6D3D1;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease-out;
+      cursor: pointer;
+    }
+
+    .checkbox:hover {
+      border-color: #16A34A;
+    }
+
+    .task-item.completed .checkbox {
+      background: #16A34A;
+      border-color: #16A34A;
+    }
+
+    .checkbox svg {
+      width: 12px;
+      height: 12px;
+      opacity: 0;
+      transition: opacity 0.2s ease-out;
+    }
+
+    .task-item.completed .checkbox svg {
+      opacity: 1;
+    }
+
+    /* 任务文字 */
+    .task-text {
+      flex: 1;
+      font-size: 15px;
+      color: #1C1917;
+      transition: all 0.2s ease-out;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .task-item.completed .task-text {
+      color: #A8A29E;
+      text-decoration: line-through;
+    }
+
+    /* 日期标签 */
+    .task-date {
+      font-size: 11px;
+      color: #D6D3D1;
+      flex-shrink: 0;
+    }
+
+    .task-item.completed .task-date {
+      color: #E7E5E4;
+    }
+
+    /* 删除按钮 — hover 显示 */
+    .delete-btn {
+      opacity: 0;
+      background: none;
+      border: none;
+      color: #DC2626;
+      font-size: 18px;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 6px;
+      transition: all 0.15s ease-out;
+      flex-shrink: 0;
+    }
+
+    .task-item:hover .delete-btn {
+      opacity: 1;
+    }
+
+    .delete-btn:hover {
+      background: #FEF2F2;
+    }
+
+    /* 空状态 */
+    .empty {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #A8A29E;
+      font-size: 14px;
+      gap: 8px;
+      padding: 60px 0;
+    }
+
+    .empty-icon {
+      font-size: 32px;
+      opacity: 0.4;
+    }
+
+    /* 底部输入栏 */
+    .input-bar {
+      padding: 12px 0;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      border-top: 1px solid #E7E5E4;
+      background: #FAFAF9;
+      position: sticky;
+      bottom: 0;
+    }
+
+    .input-bar form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .input-bar input {
+      flex: 1;
+      padding: 13px 16px;
+      border: 1.5px solid #E7E5E4;
+      border-radius: 10px;
+      font-size: 15px;
+      background: #FFFFFF;
+      color: #1C1917;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .input-bar input:focus {
+      border-color: #2563EB;
+    }
+
+    .input-bar input::placeholder {
+      color: #A8A29E;
+    }
+
+    .input-bar button {
+      padding: 13px 20px;
+      background: #2563EB;
+      color: #FFFFFF;
+      border: none;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .input-bar button:hover {
+      background: #1D4ED8;
+    }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .task-item.new {
+      animation: fadeInUp 0.2s ease-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <h1>待办清单</h1>
+      <div class="count">3 个未完成</div>
+    </div>
+
+    <div class="filters">
+      <button class="active" data-filter="all">全部</button>
+      <button data-filter="active">进行中</button>
+      <button data-filter="completed">已完成</button>
+    </div>
+
+    <div class="task-groups" id="taskList"></div>
+
+    <div class="input-bar">
+      <form id="addForm">
+        <input type="text" id="taskInput" placeholder="添加新任务..." autocomplete="off">
+        <button type="submit">添加</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const tasks = [
+      { id: '1', text: '完成项目需求文档', completed: false, date: '今天' },
+      { id: '2', text: '给设计团队发送反馈', completed: false, date: '今天' },
+      { id: '3', text: '购买本周的食材', completed: false, date: '明天' },
+      { id: '4', text: '预约下周的牙科检查', completed: true, date: '昨天' },
+      { id: '5', text: '整理书架上的书籍', completed: true, date: '3天前' },
+    ];
+
+    let currentFilter = 'all';
+    let nextId = 6;
+
+    const taskList = document.getElementById('taskList');
+    const addForm = document.getElementById('addForm');
+    const taskInput = document.getElementById('taskInput');
+    const filterBtns = document.querySelectorAll('.filters button');
+    const countEl = document.querySelector('.count');
+
+    function getFilteredTasks() {
+      if (currentFilter === 'active') return tasks.filter(t => !t.completed);
+      if (currentFilter === 'completed') return tasks.filter(t => t.completed);
+      return tasks;
+    }
+
+    function updateCount() {
+      const active = tasks.filter(t => !t.completed).length;
+      countEl.textContent = `${active} 个未完成`;
+    }
+
+    function groupByDate(filtered) {
+      const order = ['今天', '明天', '昨天', '更早'];
+      const groups = {};
+      filtered.forEach(t => {
+        const key = t.date || '其他';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(t);
+      });
+      // 按固定顺序排列分组
+      const sorted = {};
+      order.forEach(k => { if (groups[k]) sorted[k] = groups[k]; });
+      Object.keys(groups).forEach(k => { if (!sorted[k]) sorted[k] = groups[k]; });
+      return sorted;
+    }
+
+    function render() {
+      const filtered = getFilteredTasks();
+      if (filtered.length === 0) {
+        const emptyText = currentFilter === 'completed'
+          ? '还没有已完成的任务'
+          : currentFilter === 'active'
+          ? '所有任务都完成了！'
+          : '还没有任务，添加一个吧';
+        taskList.innerHTML = `
+          <div class="empty">
+            <div class="empty-icon">✓</div>
+            <div>${emptyText}</div>
+          </div>`;
+        updateCount();
+        return;
+      }
+
+      const groups = groupByDate(filtered);
+      let html = '';
+      for (const [date, items] of Object.entries(groups)) {
+        html += `
+          <div class="group-label">${date}</div>
+          <div class="group-items">`;
+        items.forEach(task => {
+          html += `
+            <div class="task-item ${task.completed ? 'completed' : ''}" data-id="${task.id}">
+              <div class="checkbox" onclick="toggle('${task.id}')">
+                <svg viewBox="0 0 12 12" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+                  <path d="M2 6l3 3 5-5"/>
+                </svg>
+              </div>
+              <div class="task-text">${task.text}</div>
+              <div class="task-date">${task.date}</div>
+              <button class="delete-btn" onclick="remove('${task.id}')">&times;</button>
+            </div>`;
+        });
+        html += `</div>`;
+      }
+      taskList.innerHTML = html;
+      updateCount();
+    }
+
+    function toggle(id) {
+      const task = tasks.find(t => t.id === id);
+      if (task) task.completed = !task.completed;
+      render();
+    }
+
+    function remove(id) {
+      const idx = tasks.findIndex(t => t.id === id);
+      if (idx !== -1) {
+        const el = document.querySelector(`[data-id="${id}"]`);
+        if (el) {
+          el.style.transform = 'scale(0.95)';
+          el.style.opacity = '0';
+          el.style.transition = 'all 0.15s';
+          setTimeout(() => { tasks.splice(idx, 1); render(); }, 150);
+        }
+      }
+    }
+
+    addForm.addEventListener('submit', e => {
+      e.preventDefault();
+      const text = taskInput.value.trim();
+      if (!text) return;
+      tasks.unshift({ id: String(nextId++), text, completed: false, date: '今天' });
+      taskInput.value = '';
+      render();
+      const first = taskList.querySelector('.task-item');
+      if (first) first.classList.add('new');
+    });
+
+    filterBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>

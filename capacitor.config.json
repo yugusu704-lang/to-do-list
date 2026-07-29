@@ -1,0 +1,5 @@
+{
+  "appId": "com.example.todolist",
+  "appName": "待办清单",
+  "webDir": "dist"
+}
