@@ -1,0 +1,7 @@
+node_modules/
+dist/
+android/
+.cache/
+.DS_Store
+Thumbs.db
+*.log
