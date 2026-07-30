@@ -9,8 +9,8 @@ public class MainActivity extends BridgeActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        // 在 bridge 初始化前注册自定义插件
-        registerPlugin(TodoStoragePlugin.class);
+        // 使用 initialPlugins 注册自定义插件（比 registerPlugin 更兼容）
+        initialPlugins.add(TodoStoragePlugin.class);
         super.onCreate(savedInstanceState);
 
         // 启动时注册每日 0:00 定时刷新小部件
