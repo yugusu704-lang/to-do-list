@@ -29,22 +29,42 @@ describe('AddTodo', () => {
     expect(onAdd).not.toHaveBeenCalled();
   });
 
-  test('填写时间和地点后提交', () => {
+  test('选择日期后提交带时间', () => {
     const onAdd = vi.fn();
     render(<AddTodo onAdd={onAdd} />);
 
     const textInput = screen.getByPlaceholderText(/添加新任务/);
+    // DateButton 内部的 datetime-local input
     const datetimeInput = document.querySelector('input[type="datetime-local"]');
-    const locationInput = screen.getByPlaceholderText(/地点/);
 
     fireEvent.change(textInput, { target: { value: '开会' } });
     fireEvent.change(datetimeInput, { target: { value: '2026-07-30T15:00' } });
-    fireEvent.change(locationInput, { target: { value: '公司会议室' } });
     fireEvent.submit(textInput.closest('form'));
 
     expect(onAdd).toHaveBeenCalledWith({
       text: '开会',
       dueAt: '2026-07-30T15:00',
+      location: null,
+    });
+  });
+
+  test('填写地点后提交带地点', () => {
+    const onAdd = vi.fn();
+    render(<AddTodo onAdd={onAdd} />);
+
+    const textInput = screen.getByPlaceholderText(/添加新任务/);
+
+    // 点击"地点"按钮显示地点输入框
+    fireEvent.click(screen.getByText('地点'));
+    const locationInput = screen.getByPlaceholderText(/输入地点/);
+
+    fireEvent.change(textInput, { target: { value: '开会' } });
+    fireEvent.change(locationInput, { target: { value: '公司会议室' } });
+    fireEvent.submit(textInput.closest('form'));
+
+    expect(onAdd).toHaveBeenCalledWith({
+      text: '开会',
+      dueAt: null,
       location: '公司会议室',
     });
   });

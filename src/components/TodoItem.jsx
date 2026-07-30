@@ -15,7 +15,7 @@ export default function TodoItem({ todo, onToggle, onDelete }) {
 
   return (
     <div
-      className={`group relative flex items-start gap-3.5 rounded-xl bg-card px-5 py-4 shadow-[var(--shadow-card)] transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.99] ${todo.completed ? 'opacity-60' : ''}`}
+      className={`group relative flex items-start gap-3.5 rounded-xl px-5 py-3.5 transition-all duration-200 hover:bg-[#F5F5F4] active:scale-[0.99] ${todo.completed ? 'opacity-60' : ''}`}
       onMouseEnter={() => setShowDelete(true)}
       onMouseLeave={() => setShowDelete(false)}
       onClick={() => setShowDelete((prev) => !prev)}

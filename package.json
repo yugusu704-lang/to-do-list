@@ -7,7 +7,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "build:apk": "vite build && npx cap sync android && D:\\to-do-list\\android\\build-debug.bat"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

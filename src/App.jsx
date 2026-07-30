@@ -58,31 +58,31 @@ export default function App() {
   }, [toast]);
 
   return (
-    <div className="flex min-h-dvh justify-center">
-      <div className="flex w-full max-w-[480px] flex-col">
-        {/* 标题区 */}
-        <header className="px-5 pt-8 pb-3">
-          <div className="flex items-baseline justify-between">
-            <h1 className="text-[26px] font-bold tracking-tight text-text">待办清单</h1>
-            {completedCount > 0 && (
-              <button
-                type="button"
-                onClick={handleClearCompleted}
-                className="text-xs text-text-muted transition-colors hover:text-danger active:scale-[0.97]"
-              >
-                清除已完成 ({completedCount})
-              </button>
-            )}
-          </div>
-          <p className="mt-1 text-[13px] tracking-wide text-text-secondary">
-            {activeCount} 个未完成
-          </p>
-        </header>
+    <div className="flex min-h-dvh flex-col bg-bg">
+      {/* 标题区 */}
+      <header className="px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-3">
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-[26px] font-bold tracking-tight text-text">待办清单</h1>
+          {completedCount > 0 && (
+            <button
+              type="button"
+              onClick={handleClearCompleted}
+              className="text-xs text-text-muted transition-colors hover:text-danger active:scale-[0.97]"
+            >
+              清除已完成 ({completedCount})
+            </button>
+          )}
+        </div>
+        <p className="mt-1 text-[13px] tracking-wide text-text-secondary">
+          {activeCount} 个未完成
+        </p>
+      </header>
 
-        {/* 筛选栏 */}
-        <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
+      {/* 筛选栏 */}
+      <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
 
-        {/* 任务列表 */}
+      {/* 任务列表 */}
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
         <TodoList
           key={dayKey}
           todos={todos}
@@ -90,10 +90,10 @@ export default function App() {
           onToggle={toggleTodo}
           onDelete={deleteTodo}
         />
-
-        {/* 底部输入栏 */}
-        <AddTodo onAdd={addTodo} />
       </div>
+
+      {/* 底部输入栏 */}
+      <AddTodo onAdd={addTodo} />
 
       {/* 撤销 toast */}
       {toast && (
