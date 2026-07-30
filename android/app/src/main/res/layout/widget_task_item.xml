@@ -10,13 +10,13 @@
     android:paddingStart="4dp"
     android:paddingEnd="4dp">
 
-    <!-- 复选框 -->
-    <CheckBox
+    <!-- 复选框用 ImageView 代替，避免小米 Launcher 不支持 CheckBox 的 setChecked -->
+    <ImageView
         android:id="@+id/task_checkbox"
         android:layout_width="20dp"
         android:layout_height="20dp"
-        android:button="@drawable/ic_widget_checkbox"
-        android:focusable="false" />
+        android:focusable="false"
+        android:scaleType="fitCenter" />
 
     <!-- 任务文字 -->
     <TextView

@@ -17,6 +17,11 @@ android {
         }
     }
     buildTypes {
+        debug {
+            // 关闭 debuggable，避免小米等设备启动卡死在等待调试器
+            debuggable false
+            minifyEnabled false
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

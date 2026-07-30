@@ -108,7 +108,13 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_task_item);
 
         v.setTextViewText(R.id.task_text, item.text);
-        v.setBoolean(R.id.task_checkbox, "setChecked", item.completed);
+
+        // 用 ImageView 切换图片代替 CheckBox 的 setChecked（兼容小米 Launcher）
+        if (item.completed) {
+            v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_checked);
+        } else {
+            v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_unchecked);
+        }
 
         // 已完成：文字加删除线 + 变灰
         if (item.completed) {
@@ -151,80 +157,33 @@ public class TodoWidgetProvider extends AppWidgetProvider {
                 JSONObject obj = arr.getJSONObject(i);
                 long createdAt = obj.optLong("createdAt", 0);
                 if (createdAt >= todayStart && createdAt < todayEnd) {
-                    result.add(new TodoItem(
-                            obj.optString("id", ""),
-                            obj.optString("text", ""),
-                            obj.optBoolean("completed", false)
-                    ));
+                    TodoItem item = new TodoItem();
+                    item.id = obj.getString("id");
+                    item.text = obj.getString("text");
+                    item.completed = obj.optBoolean("completed", false);
+                    item.completedAt = obj.optLong("completedAt", 0);
+                    result.add(item);
                 }
             }
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            // JSON 解析失败，返回空列表
         }
 
-        // 未完成在前，已完成在后
+        // 排序：未完成在前，已完成在后；同组按 createdAt 升序
         Collections.sort(result, new Comparator<TodoItem>() {
             @Override
             public int compare(TodoItem a, TodoItem b) {
-                return Boolean.compare(a.completed, b.completed);
+                if (a.completed != b.completed) {
+                    return a.completed ? 1 : -1;
+                }
+                return Long.compare(a.createdAt, b.createdAt);
             }
         });
+
         return result;
     }
 
-    // ---- 数据写入 ----
-
-    // 切换任务完成状态
-    private void toggleTodo(Context context, String todoId) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String json = prefs.getString(KEY_TODOS, "[]");
-
-        try {
-            JSONArray arr = new JSONArray(json);
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject obj = arr.getJSONObject(i);
-                if (todoId.equals(obj.optString("id"))) {
-                    boolean current = obj.optBoolean("completed", false);
-                    obj.put("completed", !current);
-                    obj.put("completedAt", !current ? System.currentTimeMillis() : JSONObject.NULL);
-                    break;
-                }
-            }
-            prefs.edit().putString(KEY_TODOS, arr.toString()).apply();
-        } catch (Exception ignored) {
-        }
-    }
-
-    // ---- PendingIntent 工厂 ----
-
-    // 打开 app 进入添加模式
-    private void openAppToAdd(Context context) {
-        Intent intent = new Intent(context, MainActivity.class);
-        intent.putExtra("action", "ADD");
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        context.startActivity(intent);
-    }
-
-    // "+"按钮 → 直接启动 MainActivity（带 action=ADD）
-    private PendingIntent createAddPendingIntent(Context context) {
-        Intent intent = new Intent(context, MainActivity.class);
-        intent.putExtra("action", "ADD");
-        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-        return PendingIntent.getActivity(
-                context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    private PendingIntent createOpenPendingIntent(Context context) {
-        Intent intent = new Intent(context, MainActivity.class);
-        return PendingIntent.getActivity(
-                context, 0, intent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-    }
-
-    // ---- 工具方法 ----
-
-    // 获取今天 0:00 的毫秒时间戳
-    static long getTodayStartMillis() {
+    private static long getTodayStartMillis() {
         Calendar cal = Calendar.getInstance();
         cal.set(Calendar.HOUR_OF_DAY, 0);
         cal.set(Calendar.MINUTE, 0);
@@ -233,39 +192,81 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         return cal.getTimeInMillis();
     }
 
-    // 刷新所有已注册的小部件实例
-    public static void refreshAllWidgets(Context context) {
-        AppWidgetManager manager = AppWidgetManager.getInstance(context);
-        // 刷新4×2
-        ComponentName comp4x2 = new ComponentName(context, TodoWidgetProvider.class);
-        int[] ids4x2 = manager.getAppWidgetIds(comp4x2);
-        if (ids4x2.length > 0) {
-            Intent intent = new Intent(context, TodoWidgetProvider.class);
-            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids4x2);
-            context.sendBroadcast(intent);
-        }
-        // 刷新4×3
-        ComponentName comp4x3 = new ComponentName(context, TodoWidgetProviderLarge.class);
-        int[] ids4x3 = manager.getAppWidgetIds(comp4x3);
-        if (ids4x3.length > 0) {
-            Intent intent = new Intent(context, TodoWidgetProviderLarge.class);
-            intent.setAction(AppWidgetManager.ACTION_APPWIDGET_UPDATE);
-            intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids4x3);
-            context.sendBroadcast(intent);
+    // ---- 交互 ----
+
+    // 切换任务完成状态
+    private void toggleTodo(Context context, String todoId) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        String json = prefs.getString(KEY_TODOS, "[]");
+        try {
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject obj = arr.getJSONObject(i);
+                if (todoId.equals(obj.getString("id"))) {
+                    boolean current = obj.optBoolean("completed", false);
+                    obj.put("completed", !current);
+                    if (!current) {
+                        obj.put("completedAt", System.currentTimeMillis());
+                    } else {
+                        obj.put("completedAt", (Object) null);
+                    }
+                    break;
+                }
+            }
+            prefs.edit().putString(KEY_TODOS, arr.toString()).apply();
+        } catch (Exception e) {
+            // 解析失败，忽略
         }
     }
 
-    // 内部数据类
+    // 刷新所有小部件
+    public static void refreshAllWidgets(Context context) {
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        ComponentName provider4x2 = new ComponentName(context, TodoWidgetProvider.class);
+        ComponentName provider4x3 = new ComponentName(context, TodoWidgetProviderLarge.class);
+
+        int[] ids4x2 = manager.getAppWidgetIds(provider4x2);
+        int[] ids4x3 = manager.getAppWidgetIds(provider4x3);
+
+        if (ids4x2.length > 0) {
+            new TodoWidgetProvider().onUpdate(context, manager, ids4x2);
+        }
+        if (ids4x3.length > 0) {
+            new TodoWidgetProviderLarge().onUpdate(context, manager, ids4x3);
+        }
+    }
+
+    // 打开 App 并聚焦输入框
+    private void openAppToAdd(Context context) {
+        Intent intent = new Intent(context, MainActivity.class);
+        intent.putExtra("action", "ADD");
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        context.startActivity(intent);
+    }
+
+    private PendingIntent createAddPendingIntent(Context context) {
+        Intent intent = new Intent(context, TodoWidgetProvider.class);
+        intent.setAction(ACTION_ADD);
+        return PendingIntent.getBroadcast(
+                context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    private PendingIntent createOpenPendingIntent(Context context) {
+        Intent intent = new Intent(context, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        return PendingIntent.getActivity(
+                context, 0, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
+    // ---- 数据类 ----
+
     static class TodoItem {
         String id;
         String text;
         boolean completed;
-
-        TodoItem(String id, String text, boolean completed) {
-            this.id = id;
-            this.text = text;
-            this.completed = completed;
-        }
+        long completedAt;
+        long createdAt;
     }
 }

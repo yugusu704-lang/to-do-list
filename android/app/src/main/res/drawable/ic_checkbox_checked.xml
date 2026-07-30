@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 选中状态：绿色实心圆 + 白色对勾 -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- 绿色实心圆底 -->
+    <item>
+        <shape android:shape="oval">
+            <solid android:color="@color/widget_done" />
+            <size android:width="20dp" android:height="20dp" />
+        </shape>
+    </item>
+    <!-- 白色对勾（用矢量图） -->
+    <item
+        android:drawable="@drawable/ic_check_white"
+        android:gravity="center" />
+</layer-list>

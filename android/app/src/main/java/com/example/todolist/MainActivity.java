@@ -14,7 +14,12 @@ public class MainActivity extends BridgeActivity {
         super.onCreate(savedInstanceState);
 
         // 启动时注册每日 0:00 定时刷新小部件
-        TodoWidgetRefreshReceiver.scheduleNextAlarm(this);
+        // 用 try-catch 保护，因为 Android 12+ 需要精确闹钟权限，可能抛出 SecurityException
+        try {
+            TodoWidgetRefreshReceiver.scheduleNextAlarm(this);
+        } catch (SecurityException e) {
+            // 权限未授予，忽略（小部件刷新功能受限，但不影响主 App）
+        }
 
         // 冷启动时如果带 action=ADD，立即写入标记供 Web 端读取
         handleFocusAdd(getIntent());
