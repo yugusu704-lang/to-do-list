@@ -1,5 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { App as CapApp } from '@capacitor/app';
 import useTodos from './hooks/useTodos';
+import TodoStorage from './plugins/todoStorage';
 import FilterTabs from './components/FilterTabs';
 import TodoList from './components/TodoList';
 import AddTodo from './components/AddTodo';
@@ -13,11 +15,24 @@ function msUntilMidnight() {
 
 // 根组件
 export default function App() {
-  const { todos, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos } = useTodos();
+  const { todos, loaded, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative } = useTodos();
   const [filter, setFilter] = useState('all');
   const [dayKey, setDayKey] = useState(() => new Date().toDateString());
   const [toast, setToast] = useState(null);
   const toastTimerRef = useRef(null);
+  const inputRef = useRef(null);
+
+  // 读取并清除 focus_add 标记，聚焦输入框
+  const checkAndFocusInput = useCallback(async () => {
+    try {
+      const { focus } = await TodoStorage.getAndClearFocusAdd();
+      if (focus && inputRef.current) {
+        inputRef.current.focus();
+      }
+    } catch {
+      // Web 开发环境下插件不可用，静默
+    }
+  }, []);
 
   // 跨天自动刷新分组标签
   useEffect(() => {
@@ -26,6 +41,22 @@ export default function App() {
     }, msUntilMidnight());
     return () => clearTimeout(timer);
   }, [dayKey]);
+
+  // app 从后台回到前台时，从 SharedPreferences 重新同步数据 + 检查 focus_add
+  useEffect(() => {
+    const listener = CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) {
+        resyncFromNative();
+        checkAndFocusInput();
+      }
+    });
+    return () => { listener.then((l) => l.remove()); };
+  }, [resyncFromNative, checkAndFocusInput]);
+
+  // 冷启动时读取 focus_add 标记（处理从桌面直接打开的场景）
+  useEffect(() => {
+    checkAndFocusInput();
+  }, [checkAndFocusInput]);
 
   const activeCount = todos.filter((t) => !t.completed).length;
   const completedCount = todos.filter((t) => t.completed).length;
@@ -93,7 +124,7 @@ export default function App() {
       </div>
 
       {/* 底部输入栏 */}
-      <AddTodo onAdd={addTodo} />
+      <AddTodo ref={inputRef} onAdd={addTodo} />
 
       {/* 撤销 toast */}
       {toast && (

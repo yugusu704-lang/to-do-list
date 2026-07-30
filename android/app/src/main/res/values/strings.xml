@@ -1,0 +1,8 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">待办清单</string>
+    <string name="title_activity_main">待办清单</string>
+    <string name="package_name">com.example.todolist</string>
+    <string name="custom_url_scheme">com.example.todolist</string>
+    <string name="widget_description">在桌面显示今日待办任务</string>
+</resources>

@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, forwardRef } from 'react';
 import DateButton from './DateButton';
 
-// 添加任务表单组件（任务内容 + 日期 + 地点）
-export default function AddTodo({ onAdd }) {
+// 添加任务表单组件（支持 ref 转发，供 widget 深度链接聚焦输入框）
+const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
   const [text, setText] = useState('');
   const [dueAt, setDueAt] = useState('');
   const [location, setLocation] = useState('');
@@ -28,6 +28,7 @@ export default function AddTodo({ onAdd }) {
       <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
         {/* 任务内容输入 */}
         <input
+          ref={ref}
           type="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -71,4 +72,6 @@ export default function AddTodo({ onAdd }) {
       </form>
     </div>
   );
-}
+});
+
+export default AddTodo;

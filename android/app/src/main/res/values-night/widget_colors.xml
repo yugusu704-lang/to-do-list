@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 小部件颜色（深色模式）— 跟随系统深浅切换 -->
+    <color name="widget_bg">#1C1917</color>
+    <color name="widget_text_primary">#FAFAF9</color>
+    <color name="widget_text_secondary">#A8A29E</color>
+    <color name="widget_accent">#3B82F6</color>
+    <color name="widget_done">#22C55E</color>
+    <color name="widget_checkbox_border">#57534E</color>
+</resources>

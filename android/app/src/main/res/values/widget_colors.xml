@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 小部件颜色（浅色模式）— 与 app 配色保持一致 -->
+    <color name="widget_bg">#FFFFFF</color>
+    <color name="widget_text_primary">#1C1917</color>
+    <color name="widget_text_secondary">#78716C</color>
+    <color name="widget_accent">#2563EB</color>
+    <color name="widget_done">#16A34A</color>
+    <color name="widget_checkbox_border">#D6D3D1</color>
+</resources>

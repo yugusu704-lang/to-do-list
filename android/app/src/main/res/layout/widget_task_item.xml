@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 单条任务行布局（RemoteViews 仅支持有限控件） -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:paddingTop="6dp"
+    android:paddingBottom="6dp"
+    android:paddingStart="4dp"
+    android:paddingEnd="4dp">
+
+    <!-- 复选框 -->
+    <CheckBox
+        android:id="@+id/task_checkbox"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:button="@drawable/ic_widget_checkbox"
+        android:focusable="false" />
+
+    <!-- 任务文字 -->
+    <TextView
+        android:id="@+id/task_text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
+        android:textColor="@color/widget_text_primary"
+        android:textSize="14sp" />
+
+</LinearLayout>

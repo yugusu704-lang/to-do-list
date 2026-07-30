@@ -1,6 +1,5 @@
 node_modules/
 dist/
-android/
 apk-releases/
 .apk-version
 .cache/

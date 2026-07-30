@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 复选框状态切换：空心圆（未完成）→ 绿色实心圆（已完成） -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_checked="true">
+        <shape android:shape="oval">
+            <solid android:color="@color/widget_done" />
+            <size android:width="20dp" android:height="20dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="oval">
+            <stroke android:width="2dp" android:color="@color/widget_checkbox_border" />
+            <size android:width="20dp" android:height="20dp" />
+        </shape>
+    </item>
+</selector>

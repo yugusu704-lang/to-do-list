@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import TodoStorage from '../plugins/todoStorage';
 
 const STORAGE_KEY = 'todos';
 const AUTO_CLEAN_DAYS = 30;
@@ -11,8 +12,8 @@ function generateId() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
-// 从 localStorage 读取（带 try-catch 保护）
-function loadTodos() {
+// 从 localStorage 同步读取（仅用于首次迁移判断）
+function loadFromLocalStorage() {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     return stored ? JSON.parse(stored) : [];
@@ -21,13 +22,50 @@ function loadTodos() {
   }
 }
 
+// 异步加载（优先 SharedPreferences，fallback localStorage，自动迁移存量数据）
+async function loadTodosAsync() {
+  try {
+    const { data } = await TodoStorage.load();
+    const parsed = JSON.parse(data);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      return { todos: parsed, source: 'sharedPrefs' };
+    }
+    // SharedPreferences 为空，检查 localStorage 是否有存量数据
+    if (Array.isArray(parsed) && parsed.length === 0) {
+      const localData = loadFromLocalStorage();
+      if (localData.length > 0) {
+        // 一次性迁移：写入 SharedPreferences，后续不再读 localStorage
+        await TodoStorage.save({ data: JSON.stringify(localData) });
+        return { todos: localData, source: 'sharedPrefs' };
+      }
+    }
+    return { todos: [], source: 'sharedPrefs' };
+  } catch {
+    // 插件不可用（浏览器开发环境），fallback 到 localStorage
+    return { todos: loadFromLocalStorage(), source: 'localStorage' };
+  }
+}
+
+// 异步保存
+async function saveTodosAsync(todos) {
+  const json = JSON.stringify(todos);
+  try {
+    await TodoStorage.save({ data: json });
+  } catch {
+    // 插件不可用时静默
+  }
+  // 同步备份到 localStorage（浏览器开发环境用）
+  try {
+    localStorage.setItem(STORAGE_KEY, json);
+  } catch {}
+}
+
 // 清理完成超过 30 天的任务
 function autoClean(todos) {
   const now = Date.now();
   const threshold = AUTO_CLEAN_DAYS * 24 * 60 * 60 * 1000;
   return todos.filter((todo) => {
     if (!todo.completed) return true;
-    // 用 completedAt 判断，旧数据无 completedAt 则跳过（不清理）
     if (!todo.completedAt) return true;
     return now - todo.completedAt < threshold;
   });
@@ -35,15 +73,28 @@ function autoClean(todos) {
 
 // Todo 数据管理 Hook
 export default function useTodos() {
-  const [todos, setTodos] = useState(() => autoClean(loadTodos()));
+  const [todos, setTodos] = useState([]);
+  const loadedRef = useRef(false);
 
-  // 数据变化时写入 localStorage
+  // 用于测试：等待初始加载完成的 Promise
+  const loadedResolveRef = useRef(null);
+  const loadedPromiseRef = useRef(new Promise((resolve) => {
+    loadedResolveRef.current = resolve;
+  }));
+
+  // 启动时异步加载（含迁移逻辑）
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(todos));
-    } catch {
-      // 隐私模式或存储满时静默失败
-    }
+    loadTodosAsync().then(({ todos: data }) => {
+      setTodos(autoClean(data));
+      loadedRef.current = true;
+      loadedResolveRef.current?.();
+    });
+  }, []);
+
+  // 数据变化时异步保存（跳过首次渲染和未加载完成前）
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    saveTodosAsync(todos);
   }, [todos]);
 
   // 添加任务
@@ -97,5 +148,11 @@ export default function useTodos() {
     setTodos((prev) => [...restored, ...prev]);
   }, []);
 
-  return { todos, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos };
+  // 从原生端重新同步（app 回到前台时调用）
+  const resyncFromNative = useCallback(async () => {
+    const { todos: fresh } = await loadTodosAsync();
+    setTodos(autoClean(fresh));
+  }, []);
+
+  return { todos, loadedPromise: loadedPromiseRef.current, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative };
 }
