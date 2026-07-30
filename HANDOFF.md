@@ -1,291 +1,246 @@
-# 桌面小部件功能 Handoff 文档
+# HANDOFF.md — 项目交接文档
 
-> **项目**：To-Do List 安卓 App  
-> **功能**：桌面小部件（App Widget）  
-> **版本**：v4（功能）→ v5 → v6（修复）  
-> **日期**：2026-07-30  
-
----
-
-## 一、架构总览
-
-### 1.1 技术栈
-
-| 层级 | 技术 | 版本 | 用途 |
-|------|------|------|------|
-| 前端框架 | React + Vite | React 19 / Vite 8 | Web UI |
-| 打包方案 | Capacitor | 8.4.2 | Web → Android 桥接 |
-| 存储层 | SharedPreferences | Android 原生 | 统一数据源（替代 localStorage） |
-| 小部件框架 | AppWidgetProvider | Android SDK | RemoteViews 渲染 |
-| 定时刷新 | AlarmManager + BroadcastReceiver | Android SDK | 每日 0:00 刷新 |
-
-### 1.2 数据流
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Android 原生层                        │
-│                                                              │
-│  ┌─────────────────┐    ┌────────────────────────────────┐  │
-│  │  桌面小部件       │    │  SharedPreferences              │  │
-│  │  (RemoteViews)   │◄──►│  todo_prefs / todos_json        │  │
-│  │                  │    │                                  │  │
-│  │  复选框点击 ──────┼──► │  toggleTodo() → 写入 JSON       │  │
-│  │  "+"按钮 ────────┼──► │  MainActivity (action=ADD)       │  │
-│  └─────────────────┘    └───────────────┬────────────────┘  │
-│                                         │                    │
-│  ┌──────────────────────────────────────┼────────────────┐  │
-│  │  Capacitor 插件桥接                    │                 │  │
-│  │  TodoStoragePlugin.java              │                 │  │
-│  │    load() ← 读 SharedPreferences     │                 │  │
-│  │    save() → 写 SharedPreferences      │                 │  │
-│  │    setFocusAdd() → 写焦点标记         │                 │  │
-│  │    getAndClearFocusAdd() → 读+清除标记│                 │  │
-│  └──────────────┬───────────────────────┘                 │  │
-└─────────────────┼──────────────────────────────────────────┘  │
-                  │  JS ↔ Java 桥接                              │
-┌─────────────────┼──────────────────────────────────────────────┐
-│  Web 层 (React)  │                                              │
-│                  ▼                                              │
-│  todoStorage.js  ← registerPlugin('TodoStorage', { web: ... }) │
-│  useTodos.js     ← loadTodosAsync() / saveTodosAsync()         │
-│  App.jsx         ← appStateChange → resyncFromNative()          │
-│                 ← appStateChange → checkAndFocusInput()         │
-│  AddTodo.jsx     ← forwardRef → inputRef.focus()                │
-└────────────────────────────────────────────────────────────────┘
-```
+> 生成时间：2026-07-30
+> 开发环境：VS Code + Claude 插件
+> 前期调试工具：Hermes Agent（已迁移至 VS Code）
 
 ---
 
-## 二、完整文件清单
+## 一、项目概述
 
-### 2.1 新增 Java 文件（3 个）
+### 1.1 项目名称
+**待办清单 (To-Do List)** — Android 桌面小组件待办应用
 
-| 文件 | 路径 | 说明 |
-|------|------|------|
-| `TodoStoragePlugin.java` | `android/app/src/main/java/com/example/todolist/` | Capacitor 原生插件，桥接 SharedPreferences |
-| `TodoWidgetProvider.java` | `android/app/src/main/java/com/example/todolist/widget/` | AppWidget 核心：读取/渲染/交互 |
-| `TodoWidgetProviderLarge.java` | 同上 | 4×3 子类（Android 不允许同一个 Provider 注册两次） |
-| `TodoWidgetRefreshReceiver.java` | 同上 | 每日 0:00 定时刷新广播 |
-
-### 2.2 修改的 Java 文件（1 个）
-
-| 文件 | 改动 |
+### 1.2 技术栈
+| 层级 | 技术 |
 |------|------|
-| `MainActivity.java` | 新增 `initialPlugins.add()`、`onNewIntent`、`handleFocusAdd`、`scheduleNextAlarm` |
+| 前端框架 | React + Vite |
+| 样式 | Tailwind CSS |
+| 移动端框架 | Capacitor |
+| 目标平台 | Android (API 26+) |
+| 测试设备 | Xiaomi 14 (MIUI, Android 15) |
+| 语言 | JavaScript (前端) + Java (Android 原生) |
 
-### 2.3 新增 Android 资源文件（10 个）
+### 1.3 仓库信息
+- **GitHub**: https://github.com/yugusu704-lang/to-do-list
+- **最新 Release**: v8（GitHub Releases 页面）
+- **项目路径**: `D:\to-do-list`
 
-| 文件 | 路径 | 说明 |
-|------|------|------|
-| `widget_colors.xml` | `res/values/` | 浅色模式 6 色 |
-| `widget_colors.xml` | `res/values-night/` | 深色模式 6 色 |
-| `widget_bg.xml` | `res/drawable/` | 16dp 圆角卡片背景 |
-| `ic_widget_add.xml` | `res/drawable/` | + 号矢量图标 |
-| `ic_widget_checkbox.xml` | `res/drawable/` | 复选框状态 selector |
-| `widget_task_item.xml` | `res/layout/` | 单条任务行（CheckBox + TextView） |
-| `widget_todo_4x2.xml` | `res/layout/` | 4×2 布局 |
-| `widget_todo_4x3.xml` | `res/layout/` | 4×3 布局 |
-| `widget_todo_4x2_info.xml` | `res/xml/` | 4×2 元数据 |
-| `widget_todo_4x3_info.xml` | `res/xml/` | 4×3 元数据 |
+### 1.4 核心功能
+1. 待办任务 CRUD（创建、读取、更新、删除）
+2. 任务支持：内容文字、截止时间（dueAt）、地点（location）
+3. Android 桌面小组件（4×2 和 4×3 两种尺寸）
+4. 小组件显示"今日待办"（只显示 dueAt 在今天的未完成任务）
+5. 小组件内点击复选框可标记完成（完成后从小组件中移除）
+6. SharedPreferences 统一数据源（Web 端 + 原生共享）
 
-### 2.4 修改的 Android 资源文件（1 个）
+---
 
-| 文件 | 改动 |
-|------|------|
-| `strings.xml` | 新增 `widget_description` 字符串 |
+## 二、项目目录结构
 
-### 2.5 新增/修改的 Web 文件（6 个）
-
-| 文件 | 改动 |
-|------|------|
-| `src/plugins/todoStorage.js` | **新增** Capacitor 插件 Web 端接口 |
-| `src/hooks/useTodos.js` | **重写** 异步存储 + 迁移逻辑 |
-| `src/App.jsx` | **新增** onResume 同步 + focus_add 处理 |
-| `src/components/AddTodo.jsx` | **新增** forwardRef 支持 |
-| `package.json` | **新增** `@capacitor/app` 依赖 |
-| `.gitignore` | **移除** `android/` 目录忽略 |
+```
+D:\to-do-list\
+├── CLAUDE.md                          # Claude 技术规范文档
+├── DEVELOPMENT.md                     # 开发阶段指南（含 skill 方法论）
+├── HANDOFF.md                         # 本文件 - 交接文档
+├── package.json
+├── vite.config.js                     # Vite 配置（含 base: './'）
+├── capacitor.config.json              # Capacitor 配置
+├── index.html                         # 入口 HTML
+├── src/
+│   ├── main.jsx                       # React 入口
+│   ├── App.jsx                        # 主应用组件
+│   ├── components/
+│   │   ├── AddTodo.jsx                # 添加任务表单（含 DateButton）
+│   │   ├── DateButton.jsx             # 日期选择器组件
+│   │   ├── TodoList.jsx               # 任务列表
+│   │   └── TodoItem.jsx               # 单条任务
+│   ├── hooks/
+│   │   └── useTodos.js                # 核心数据管理 Hook
+│   ├── plugins/
+│   │   └── todoStorage.js             # Capacitor 插件桥接
+│   └── styles/
+│       └── index.css                  # Tailwind CSS
+├── android/
+│   └── app/
+│       ├── build.gradle               # Android 构建配置
+│       └── src/main/
+│           ├── AndroidManifest.xml    # 权限声明
+│           ├── java/com/example/todolist/
+│           │   ├── MainActivity.java
+│           │   ├── TodoStoragePlugin.java  # SharedPreferences 读写插件
+│           │   └── widget/
+│           │       ├── TodoWidgetProvider.java      # 4×3 小组件 Provider
+│           │       ├── TodoWidgetProviderLarge.java  # 4×2 小组件 Provider（继承自 4×3）
+│           │       ├── TodoWidgetRefreshReceiver.java # 定时刷新广播
+│           │       └── TodoWidgetHelper.java         # 辅助类
+│           └── res/
+│               ├── layout/
+│               │   ├── widget_todo_4x2.xml    # 4×2 小组件布局
+│               │   ├── widget_todo_4x3.xml    # 4×3 小组件布局
+│               │   └── widget_task_item.xml   # 单条任务行布局
+│               ├── drawable/
+│               │   ├── widget_bg.xml          # 小组件背景
+│               │   ├── ic_widget_add.xml      # 添加按钮图标
+│               │   ├── ic_checkbox_checked.xml    # 已选中复选框（绿色圆+白色对勾）
+│               │   ├── ic_checkbox_unchecked.xml  # 未选中复选框（空心圆）
+│               │   ├── ic_check_white.xml         # 白色对勾矢量图
+│               │   ├── ic_clock_12dp.xml          # 时钟图标
+│               │   └── ic_location_12dp.xml       # 位置图标
+│               ├── values/
+│               │   ├── colors.xml             # 颜色定义
+│               │   └── widget_colors.xml      # 小组件专用颜色
+│               └── xml/
+│                   └── todo_widget_info.xml   # 小组件元数据
+├── skills/                            # 导出的 skill 文件（供 Claude 插件参考）
+└── figma-reference/                   # Figma 设计参考文件
+```
 
 ---
 
 ## 三、已解决的问题
 
-### 问题 1：数据源不统一（阶段 1-2）
+### 3.1 APK 崩溃问题（v1-v6）
 
-**问题**：Web 端用 localStorage，Android 原生小部件无法读取 WebView 的 localStorage。  
-**解决**：创建 `TodoStoragePlugin` Capacitor 原生插件，用 SharedPreferences 统一数据源。Web 端通过 `registerPlugin` 桥接，开发环境自动 fallback 到 localStorage。
+| 版本 | 问题 | 解决方案 |
+|------|------|---------|
+| v1-v3 | 缺少依赖/配置错误 | 修复 Capacitor 配置 |
+| v4 | 插件注册方式错误 | 改用 `initialPlugins` 注册 |
+| v5 | `colors.xml` 缺失 | 补充颜色资源文件 |
+| v6 | WebView 加载失败 | 未解决（v7 修复路径问题） |
 
-### 问题 2：存量数据迁移（阶段 2）
+### 3.2 资源路径问题（v7）
 
-**问题**：老用户的任务存在 localStorage 里，升级后 SharedPreferences 是空的。  
-**解决**：`loadTodosAsync()` 中加入迁移逻辑——如果 SharedPreferences 为空且 localStorage 有数据，自动把 localStorage 数据写入 SharedPreferences。对用户完全无感。
+**问题**: Vite 构建输出的资源路径为绝对路径 `/assets/xxx.js`，Capacitor 8 把文件放在 `assets/public/` 子目录，导致 WebView 找不到资源。
 
-### 问题 3：useTodos 异步化带来的测试问题（阶段 2）
+**解决**: 在 `vite.config.js` 中添加 `base: './'` 使用相对路径。
 
-**问题**：useTodos 从同步 localStorage 变为异步 SharedPreferences 后，所有测试用例都出现 timing 问题。
+### 3.3 debuggable 启动卡死（v7）
 
-**三个子问题**：
+**问题**: debug 版本默认 `debuggable = true`，导致小米设备启动时等待调试器。
 
-**3a. `loaded` 作为 state 导致 save effect 不触发**  
-- **现象**：`saveTodosAsync` 从未被调用，localStorage 无写入  
-- **根因**：`loaded` 是 React state，`addTodo` 在 `act()` 内调用时，`loaded` 的闭包值仍为 `false`（异步加载未完成），导致 save effect 的 `if (!loaded) return` 跳过  
-- **修复**：将 `loaded` 从 `useState` 改为 `useRef`（`loadedRef`），effect 直接读 ref 的当前值，不依赖闭包
+**解决**: 在 `build.gradle` 的 `debug` buildType 中添加 `debuggable false`。
 
-**3b. `loadedPromise` 的 state 更新延迟**  
-- **现象**：`await loadedPromise` 后 `result.current.todos` 仍为空  
-- **根因**：Promise 在 `.then()` 中 resolve，但 React 的 `setTodos()` 需要再一个 microtask 才提交  
-- **修复**：测试中用 `await waitFor(() => expect(result.current.todos).toHaveLength(1))` 替代直接断言
+### 3.4 精确闹钟权限崩溃（v7）
 
-**3c. 测试中异步保存不写 localStorage**  
-- **现象**：`addTodo` 后立即读 `localStorage.getItem('todos')` 返回 null  
-- **根因**：`@capacitor/core` 的 `registerPlugin` 返回的 Promise 需要 microtask flush，`act()` 不保证异步 Promise 完成  
-- **修复**：测试中在 `act()` 后加 `await new Promise(r => setTimeout(r, 50))` 显式等待
+**问题**: Android 12+ 要求 `SCHEDULE_EXACT_ALARM` 权限才能设置精确闹钟。
 
-### 问题 4：Capacitor 8 API 变更（阶段 1 构建）
+**解决**:
+1. 在 `AndroidManifest.xml` 中添加权限声明
+2. 在 `MainActivity.java` 中用 try-catch 保护 `scheduleNextAlarm()` 调用
 
-**问题**：编译报错 `方法不会覆盖或实现超类型的方法`，`init(Bundle, ArrayList)` 不存在。  
-**根因**：指导文件中写的 `init()` 方法是 Capacitor 3-4 的旧 API。Capacitor 8 的 `BridgeActivity` 没有 `init` 方法，改用 `registerPlugin()` + `onCreate()`。  
-**修复**：改用 `registerPlugin(TodoStoragePlugin.class)` 在 `super.onCreate()` 之前调用。
+### 3.5 小米 Launcher 小组件崩溃（v8）
 
-### 问题 5：`registerPlugin()` 在小米 MIUI 设备上闪退（阶段 6 构建后）
+**问题**: 小米桌面（MIUI Launcher）把标准 `CheckBox` 替换成了自己的 `HomeMIUIWidgetCheckBox`，不支持 RemoteViews 的 `setChecked()` 方法。
 
-**问题**：v4 APK 在小米 14 上启动即闪退。  
-**根因**：`registerPlugin()` 内部直接操作 `bridgeBuilder`，在 `super.onCreate()` 之前调用可能与 MIUI 等定制系统的 Activity 初始化时序冲突。  
-**修复**：改用 `initialPlugins.add(TodoStoragePlugin.class)`，这是 `BridgeActivity` 的 `protected` 字段，在 `super.onCreate()` 内部的 `load()` 方法中才会被读取，时序更安全。
+**解决**:
+1. 将 `CheckBox` 改为 `ImageView`
+2. 使用两个不同的 drawable 图片切换状态（`ic_checkbox_checked.xml` / `ic_checkbox_unchecked.xml`）
+3. 在 Java 代码中用 `setImageViewResource()` 代替 `setBoolean("setChecked")`
 
-**两种注册方式对比**：
+### 3.6 refreshAllWidgets 访问权限（v8）
+
+**问题**: `refreshAllWidgets()` 方法是 package-private，`TodoStoragePlugin` 在另一个包中无法访问。
+
+**解决**: 改为 `public static`。
+
+### 3.7 dueAt 解析问题（v8）
+
+**问题**: Web 端 `datetime-local` 输入框返回 ISO 格式 `"2026-07-30T10:30"`（不带秒），Java 端解析格式不匹配。
+
+**解决**: 支持两种格式：
+- 不带秒: `"yyyy-MM-dd'T'HH:mm"`
+- 带秒: `"yyyy-MM-dd'T'HH:mm:ss"`
+
+### 3.8 小组件不显示任务（v8）
+
+**问题**: `dueAt` 字段为 null 时任务被过滤掉。
+
+**解决**: 如果没有设置 `dueAt`，使用 `createdAt` 作为默认值（注意：用户后来要求恢复为"没有时间的任务不显示"）。
+
+---
+
+## 四、当前状态（待修复）
+
+### 4.1 小组件显示逻辑（核心待修复）
+
+**用户最新要求**:
+1. ✅ 小组件显示"今日待办"——只显示 dueAt 在今天的未完成任务
+2. ✅ 每个任务显示：任务内容 + 时间 + 地点
+3. ✅ 按时间顺序排列
+4. ✅ 任务过多时可滑动显示
+5. ✅ 完成后从小组件中移除
+6. ❌ **没有时间标注的任务不要显示在小组件中**
+7. ⚠️ 排版需要更美观清晰，字体需要更大更清晰
+
+**当前问题**: 
+- 用户创建了没有时间的任务，不应该显示在小组件中
+- 需要确认：用户是否为任务设置了 dueAt（截止时间）？如果没设置，小组件会显示"今天没有待办任务"
+
+### 4.2 小组件布局问题
+
+当前 `widget_task_item.xml` 使用垂直布局（LinearLayout vertical），包含：
+- 复选框（ImageView）
+- 任务文字（16sp 加粗）
+- 时间 + 地点行（13sp，带图标）
+
+**待优化**:
+- 排版间距可能需要调整
+- 字体大小可能需要根据用户反馈微调
+
+---
+
+## 五、关键代码位置
+
+### 5.1 数据模型
+
+```javascript
+// src/hooks/useTodos.js
+const newTodo = {
+  id: generateId(),           // 唯一 ID
+  text: trimmed,              // 任务内容
+  completed: false,           // 是否完成
+  completedAt: null,          // 完成时间戳
+  category: null,             // 分类（未使用）
+  createdAt: Date.now(),      // 创建时间戳
+  dueAt: dueAt || null,       // 截止时间（ISO 格式字符串 "2026-07-30T10:30" 或 null）
+  location: location?.trim() || null,  // 地点
+};
+```
+
+### 5.2 SharedPreferences 数据存储
+
 ```java
-// ❌ 方式 A：registerPlugin（MIUI 等设备可能崩溃）
-registerPlugin(TodoStoragePlugin.class);  // 直接操作 bridgeBuilder
-super.onCreate(savedInstanceState);
-
-// ✅ 方式 B：initialPlugins（推荐）
-initialPlugins.add(TodoStoragePlugin.class);  // 只写入列表，super.onCreate 中的 load() 才读取
-super.onCreate(savedInstanceState);
+// TodoStoragePlugin.java
+// 数据存储在: /data/data/com.example.todolist/shared_prefs/todo_prefs.xml
+// Key: "todos_json"
+// Value: JSON 数组字符串
 ```
 
-### 问题 6：缺少 `@capacitor/app` 依赖（阶段 2 构建）
-
-**问题**：`npm run build` 报错 `Failed to resolve import "@capacitor/app"`。  
-**根因**：代码中 import 了 `App as CapApp`，但 `@capacitor/app` 未安装。  
-**修复**：`npm install @capacitor/app`。
-
-### 问题 7：缺少 `colors.xml` 导致启动崩溃（v5 修复）
-
-**问题**：v4 APK 在所有设备上启动崩溃。  
-**根因**：`styles.xml` 引用 `@color/colorPrimary`、`@color/colorPrimaryDark`、`@color/colorAccent`，但这些颜色未在 app 模块的 `colors.xml` 中定义。虽然 `capacitor-android` 库模块中有定义，但某些设备的资源合并机制可能不正确继承。  
-**修复**：新增 `android/app/src/main/res/values/colors.xml`，显式定义这三个颜色。
-
----
-
-## 四、当前 MainActivity.java 最终状态
+### 5.3 小组件数据过滤逻辑
 
 ```java
-package com.example.todolist;
-
-import android.content.Intent;
-import android.os.Bundle;
-import com.example.todolist.widget.TodoWidgetRefreshReceiver;
-import com.getcapacitor.BridgeActivity;
-
-public class MainActivity extends BridgeActivity {
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        // ✅ 使用 initialPlugins 而非 registerPlugin（兼容 MIUI）
-        initialPlugins.add(TodoStoragePlugin.class);
-        super.onCreate(savedInstanceState);
-
-        // ✅ 注册每日 0:00 定时刷新小部件
-        TodoWidgetRefreshReceiver.scheduleNextAlarm(this);
-
-        // ✅ 冷启动时如果带 action=ADD，写入焦点标记
-        handleFocusAdd(getIntent());
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        // ✅ app 已在前台时从 widget 打开
-        handleFocusAdd(intent);
-    }
-
-    private void handleFocusAdd(Intent intent) {
-        if (intent != null && "ADD".equals(intent.getStringExtra("action"))) {
-            TodoStoragePlugin.setFocusAdd(this);
-        }
-    }
-}
+// TodoWidgetProvider.java → loadTodayTodos()
+// 过滤条件：
+// 1. dueAt 存在且不为 null
+// 2. dueAt 在今天 0:00 ~ 明天 0:00 之间
+// 3. completed == false（未完成）
+// 4. 如果 dueAt 为 null，使用 createdAt 作为默认值（待移除）
+// 排序：按 dueAt 升序
 ```
 
----
+### 5.4 小组件刷新机制
 
-## 五、构建流程
-
-```bash
-# 1. 构建前端
-npm run build
-
-# 2. 同步到 Android
-npx cap sync android
-
-# 3. 构建 APK（需 Android Studio JDK）
-export JAVA_HOME="C:/Program Files/Android/Android Studio/jbr"
-cd android && ./gradlew.bat assembleDebug
-
-# 4. 输出位置
-# android/app/build/outputs/apk/debug/app-debug.apk
-
-# 5. 发布到 GitHub Release
-gh release create vX apk-releases/app-vX.apk --title "vX - 标题" --notes "..."
+```java
+// TodoWidgetRefreshReceiver.java
+// 每日 0:00 定时刷新
+// 调用: TodoWidgetProvider.refreshAllWidgets(context)
 ```
 
----
+### 5.5 Capacitor 配置
 
-## 六、已知问题与待改进项
-
-### 6.1 尚未验证的功能
-
-- [ ] 小部件在桌面的实际显示效果（未在真机上测试小部件添加流程）
-- [ ] 复选框在 RemoteViews 中的 CheckBox 行为（不同 Android 版本可能有差异）
-- [ ] 每日 0:00 定时刷新在 Doze 模式下是否准时（`setExactAndAllowWhileIdle` 理论上可行，但厂商定制可能拦截）
-- [ ] "+"按钮跳转 app 后输入框聚焦（forwardRef 实现，未真机验证）
-- [ ] `appStateChange` 在小米 MIUI 上是否可靠触发（MIUI 可能限制后台状态变化回调）
-
-### 6.2 潜在改进建议
-
-**存储层**  
-- 考虑把 SharedPreferences 迁移到 SQLite，支持更复杂的查询（如按分类筛选）
-- 或使用 `@capacitor/preferences` 替代自定义插件（更标准化）
-
-**小部件交互**  
-- 当前用 `setBoolean(checkbox, "setChecked", ...)` 切换复选框状态，某些老设备可能不支持，备选方案是用 `ImageView` + `setImageViewResource` 切换两个图片资源
-- 可以添加 StackView 实现滚动任务列表（当前限制 5 条）
-
-**定时刷新**  
-- 国产 ROM（MIUI、ColorOS 等）可能限制 AlarmManager 精确触发
-- 备选方案：使用 WorkManager 作为定时任务调度器（更可靠，但更复杂）
-
-**跨天场景**  
-- 当前 `loadTodayTodos` 按 `createdAt` 过滤"今天"的任务
-- 如果用户希望任务在"到期日"（`dueAt`）而非"创建日"显示，需要修改过滤逻辑
-
----
-
-## 七、提交历史
-
-| 版本 | Commit | 说明 |
-|------|--------|------|
-| v4 | `26d46ec` | feat: 桌面小部件，Capacitor 存储插件，SharedPreferences 数据桥接 |
-| v5 | `df962a5` | fix: 补充缺失的 colors.xml |
-| v6 | `4cf0538` | fix: 改用 initialPlugins 注册插件，修复小米等设备闪退 |
-
----
-
-## 八、关键配置文件内容
-
-### capacitor.config.json
 ```json
+// capacitor.config.json
 {
   "appId": "com.example.todolist",
   "appName": "待办清单",
@@ -293,23 +248,185 @@ gh release create vX apk-releases/app-vX.apk --title "vX - 标题" --notes "..."
 }
 ```
 
-### SharedPreferences 存储结构
-```
-文件名：todo_prefs
-键：todos_json  → JSON 字符串（任务数组）
-键：focus_add   → boolean（widget "+"按钮触发的焦点标记）
+### 5.6 Vite 配置
+
+```javascript
+// vite.config.js
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+  base: './',  // 关键：使用相对路径，否则 Capacitor 8 找不到资源
+  test: {
+    environment: 'jsdom',
+    setupFiles: './src/setupTests.js',
+    globals: true,
+  },
+});
 ```
 
-### 任务数据模型
-```json
-{
-  "id": "uuid-string",
-  "text": "任务内容",
-  "completed": false,
-  "completedAt": null,
-  "category": null,
-  "createdAt": 1785404145919,
-  "dueAt": null,
-  "location": null
+### 5.7 Android 构建配置
+
+```groovy
+// android/app/build.gradle
+android {
+    buildTypes {
+        debug {
+            debuggable false  // 关键：避免小米设备启动卡死
+        }
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
 }
 ```
+
+---
+
+## 六、已知陷阱和注意事项
+
+### 6.1 小米设备特殊处理
+
+1. **CheckBox 不兼容**: 小米 Launcher 替换了标准 CheckBox，必须用 ImageView + drawable 切换
+2. **debuggable 启动卡死**: debug 版本必须设置 `debuggable false`
+3. **精确闹钟权限**: Android 12+ 需要 `SCHEDULE_EXACT_ALARM` 权限，且需要 try-catch 保护
+
+### 6.2 Capacitor 8 路径问题
+
+- Vite 构建输出路径为绝对路径 `/assets/xxx.js`
+- Capacitor 8 把文件放在 `assets/public/` 子目录
+- 必须在 `vite.config.js` 中设置 `base: './'`
+
+### 6.3 RemoteViews 限制
+
+- 只支持有限的控件类型（TextView, ImageView, Button, LinearLayout 等）
+- 不支持自定义 View
+- `addView()` 只能添加到 `LinearLayout` 容器
+- 不支持 `setPadding()` 等部分方法
+
+### 6.4 数据格式
+
+- `dueAt` 在 Web 端存储为 ISO 格式字符串 `"2026-07-30T10:30"`
+- `createdAt` 存储为时间戳数字 `1753881600000`
+- SharedPreferences 中存储为 JSON 数组字符串
+
+### 6.5 ADB 调试
+
+```bash
+# ADB 路径
+C:\Users\long\AppData\Local\Android\Sdk\platform-tools\adb.exe
+
+# 安装 APK
+adb install -r D:\to-do-list\android\app\build\outputs\apk\debug\app-debug.apk
+
+# 启动 App
+adb shell am start -n com.example.todolist/.MainActivity
+
+# 查看日志
+adb logcat -d | grep -E "(com.example.todolist|FATAL|Exception)"
+
+# 查看进程
+adb shell ps | grep com.example.todolist
+```
+
+### 6.6 Gradle 构建
+
+```bash
+cd D:\to-do-list\android
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
+```
+
+---
+
+## 七、后续待办
+
+### 7.1 立即修复
+
+1. **移除 createdAt 默认值逻辑**: 没有时间的任务不应显示在小组件中
+2. **确认用户数据**: 检查用户是否为任务设置了 dueAt
+3. **排版优化**: 根据用户反馈调整字体大小和间距
+
+### 7.2 功能完善
+
+1. **滑动显示**: 当前使用 `LinearLayout` + `addView()`，如果任务过多可能需要改用 `ListView`（RemoteViews 支持）
+2. **小组件点击交互**: 点击小组件空白区域打开 App
+3. **小组件刷新**: 每日 0:00 自动刷新（已实现，待验证）
+
+### 7.3 代码质量
+
+1. **单元测试**: 使用 Vitest 编写前端测试
+2. **代码审查**: 检查安全性和性能
+3. **文档完善**: 更新 README.md
+
+---
+
+## 八、构建和部署流程
+
+### 8.1 开发环境
+
+```bash
+# 安装依赖
+npm install
+
+# 启动开发服务器
+npm run dev
+
+# 构建前端
+npm run build
+
+# 复制到 Android 项目
+npx cap copy android
+```
+
+### 8.2 Android 构建
+
+```bash
+cd android
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
+```
+
+### 8.3 部署到设备
+
+```bash
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.example.todolist/.MainActivity
+```
+
+### 8.4 发布到 GitHub
+
+```bash
+# 提交更改
+git add -A
+git commit -m "fix: 描述"
+git push origin master
+
+# 创建 Release
+gh release create v9 app-v9.apk --title "v9 - 标题" --notes "发布说明"
+```
+
+---
+
+## 九、参考文档
+
+### 9.1 项目内文档
+
+- `CLAUDE.md`: Claude 技术规范
+- `DEVELOPMENT.md`: 开发阶段指南（含 skill 方法论）
+- `skills/`: 导出的 skill 文件（11 个）
+
+### 9.2 外部参考
+
+- [Capacitor 文档](https://capacitorjs.com/docs)
+- [Android App Widgets](https://developer.android.com/develop/ui/views/appwidgets)
+- [RemoteViews](https://developer.android.com/reference/android/widget/RemoteViews)
+- [Vite 配置](https://vitejs.dev/config/)
+
+---
+
+## 十、联系方式
+
+- **GitHub**: yugusu704-lang
+- **项目仓库**: https://github.com/yugusu704-lang/to-do-list
+
+---
+
+**注意**: 本文档由 Hermes Agent 自动生成，用于在 VS Code + Claude 插件中继续开发。如有疑问，请参考项目内文档或外部参考链接。

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 4×3 小部件布局：宽大，可显示更多任务 -->
+<!-- 4×3 小部件布局 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -7,11 +7,11 @@
     android:orientation="vertical"
     android:padding="14dp">
 
-    <!-- 顶部：标题 + 添加按钮（与 4×2 相同） -->
+    <!-- 顶部：标题 + 添加按钮 -->
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginBottom="10dp">
+        android:layout_marginBottom="8dp">
 
         <TextView
             android:id="@+id/widget_title"
@@ -35,21 +35,31 @@
             android:src="@drawable/ic_widget_add" />
     </RelativeLayout>
 
-    <!-- 任务列表（比 4×2 高，可显示约5条） -->
+    <!-- 任务列表容器 -->
     <LinearLayout
         android:id="@+id/widget_task_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:minHeight="160dp"
         android:orientation="vertical" />
+
+    <!-- 空状态提示 -->
+    <TextView
+        android:id="@+id/widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:padding="16dp"
+        android:text="今天没有待办任务"
+        android:textColor="@color/widget_text_secondary"
+        android:textSize="13sp" />
 
     <!-- 底部：剩余数量 -->
     <TextView
         android:id="@+id/widget_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="6dp"
+        android:layout_marginTop="4dp"
         android:gravity="center"
         android:textColor="@color/widget_text_secondary"
         android:textSize="12sp" />
