@@ -6,3 +6,5 @@ apk-releases/
 .DS_Store
 Thumbs.db
 *.log
+# 签名密钥 - 公开仓库严禁提交！
+android/keystore/
