@@ -93,13 +93,14 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_btn_add, createAddPendingIntent(context));
 
         // 设置 ListView 的点击模板（每个任务行的 PendingIntent 基础）
-        // 必须使用显式 Intent + FLAG_IMMUTABLE，Android 14+ 禁止隐式 Intent + FLAG_MUTABLE
+        // 必须使用显式 Intent + FLAG_MUTABLE，fillInIntent 才能合并 extras 到模板 Intent
+        // 注意：FLAG_IMMUTABLE 会忽略 fillInIntent 的所有额外参数，导致 todo_id 丢失
         Intent templateIntent = new Intent(context, TodoWidgetProvider.class);
         templateIntent.setAction(ACTION_COMPLETE);
         templateIntent.setPackage(context.getPackageName());
         views.setPendingIntentTemplate(R.id.widget_task_container,
                 PendingIntent.getBroadcast(context, 0, templateIntent,
-                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE));
 
         manager.updateAppWidget(widgetId, views);
 

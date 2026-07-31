@@ -14,12 +14,14 @@
     android:clickable="true">
 
     <!-- 复选框：视觉 22dp，padding 扩大点击区域到 44dp -->
+    <!-- focusable/clickable=true 确保 fillInIntent 能作用于该视图（点击事件不被吞掉） -->
     <ImageView
         android:id="@+id/task_checkbox"
         android:layout_width="44dp"
         android:layout_height="44dp"
         android:padding="11dp"
-        android:focusable="false"
+        android:focusable="true"
+        android:clickable="true"
         android:scaleType="fitCenter" />
 
     <!-- 任务内容容器 -->

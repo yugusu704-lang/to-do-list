@@ -110,10 +110,13 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         v.setTextColor(R.id.task_location,
                 context.getResources().getColor(R.color.widget_text_secondary, null));
 
-        // 点击任务行 → 通过 fillInIntent 携带 todoId，触发模板的标记完成
+        // 点击任务行/复选框 → 通过 fillInIntent 携带 todoId，触发模板的标记完成
+        // 注意：checkbox ImageView 必须单独设置 fillInIntent，
+        // 否则点击事件会被 ImageView 消费而不传递到根视图
         Intent fillInIntent = new Intent();
         fillInIntent.putExtra(EXTRA_TODO_ID, item.id);
         v.setOnClickFillInIntent(R.id.widget_task_item_root, fillInIntent);
+        v.setOnClickFillInIntent(R.id.task_checkbox, fillInIntent);
 
         return v;
     }
