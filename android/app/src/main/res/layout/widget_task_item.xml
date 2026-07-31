@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- 单条任务行：复选框(左) + 任务信息(右) -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_task_item_root"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:gravity="center_vertical"
@@ -8,7 +9,9 @@
     android:paddingTop="6dp"
     android:paddingBottom="6dp"
     android:paddingStart="2dp"
-    android:paddingEnd="2dp">
+    android:paddingEnd="2dp"
+    android:focusable="true"
+    android:clickable="true">
 
     <!-- 复选框：视觉 22dp，padding 扩大点击区域到 44dp -->
     <ImageView

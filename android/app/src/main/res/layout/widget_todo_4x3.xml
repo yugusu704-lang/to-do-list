@@ -35,13 +35,18 @@
             android:src="@drawable/ic_widget_add" />
     </RelativeLayout>
 
-    <!-- 任务列表容器 -->
-    <LinearLayout
+    <!-- 任务列表容器（ListView 支持滚动浏览） -->
+    <ListView
         android:id="@+id/widget_task_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
-        android:orientation="vertical" />
+        android:divider="@null"
+        android:dividerHeight="0dp"
+        android:scrollbarStyle="outsideOverlay"
+        android:clipToPadding="false"
+        android:fadingEdge="vertical"
+        android:fadingEdgeLength="8dp" />
 
     <!-- 空状态提示 -->
     <TextView

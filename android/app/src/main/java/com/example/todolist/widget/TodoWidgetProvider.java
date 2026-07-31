@@ -7,7 +7,6 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Paint;
 import android.net.Uri;
 import android.view.View;
 import android.widget.RemoteViews;
@@ -70,89 +69,42 @@ public class TodoWidgetProvider extends AppWidgetProvider {
 
         RemoteViews views = new RemoteViews(context.getPackageName(), getLayoutResId());
 
-        // 清空任务容器
-        views.removeAllViews(R.id.widget_task_container);
+        // 设置 ListView 的数据适配器（通过 RemoteViewsService）
+        Intent serviceIntent = new Intent(context, TodoWidgetViewsService.class);
+        serviceIntent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        serviceIntent.setData(Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME)));
+        views.setRemoteAdapter(R.id.widget_task_container, serviceIntent);
 
-        // 控制空状态和容器的显示
+        // 控制空状态和 ListView 的显示
         if (todayTodos.isEmpty()) {
             views.setViewVisibility(R.id.widget_task_container, View.GONE);
             views.setViewVisibility(R.id.widget_empty, View.VISIBLE);
+            views.setTextViewText(R.id.widget_footer, "");
         } else {
             views.setViewVisibility(R.id.widget_task_container, View.VISIBLE);
             views.setViewVisibility(R.id.widget_empty, View.GONE);
-
-            for (TodoItem item : todayTodos) {
-                RemoteViews taskView = createTaskView(context, item);
-                views.addView(R.id.widget_task_container, taskView);
-            }
-        }
-
-        // 底部文字
-        if (todayTodos.isEmpty()) {
-            views.setTextViewText(R.id.widget_footer, "");
-        } else {
             views.setTextViewText(R.id.widget_footer, todayTodos.size() + " 个待办任务");
         }
+
+        // 空列表时显示空状态视图模板
+        views.setEmptyView(R.id.widget_task_container, R.id.widget_empty);
 
         // "+"按钮 → 打开 app 添加任务
         views.setOnClickPendingIntent(R.id.widget_btn_add, createAddPendingIntent(context));
 
+        // 设置 ListView 的点击模板（每个任务行的 PendingIntent 基础）
+        // 必须使用显式 Intent + FLAG_IMMUTABLE，Android 14+ 禁止隐式 Intent + FLAG_MUTABLE
+        Intent templateIntent = new Intent(context, TodoWidgetProvider.class);
+        templateIntent.setAction(ACTION_COMPLETE);
+        templateIntent.setPackage(context.getPackageName());
+        views.setPendingIntentTemplate(R.id.widget_task_container,
+                PendingIntent.getBroadcast(context, 0, templateIntent,
+                        PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE));
+
         manager.updateAppWidget(widgetId, views);
-    }
 
-    // 创建单条任务的 RemoteViews
-    private RemoteViews createTaskView(Context context, TodoItem item) {
-        RemoteViews v = new RemoteViews(context.getPackageName(), R.layout.widget_task_item);
-
-        // 任务内容
-        v.setTextViewText(R.id.task_text, item.text);
-
-        // 时间
-        if (item.dueAt > 0) {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            v.setTextViewText(R.id.task_time, sdf.format(new Date(item.dueAt)));
-            v.setViewVisibility(R.id.task_time, View.VISIBLE);
-        } else {
-            v.setViewVisibility(R.id.task_time, View.GONE);
-        }
-
-        // 地点
-        boolean hasLocation = item.location != null && !item.location.isEmpty();
-        if (hasLocation) {
-            v.setTextViewText(R.id.task_location, item.location);
-            v.setViewVisibility(R.id.task_location, View.VISIBLE);
-        } else {
-            v.setViewVisibility(R.id.task_location, View.GONE);
-        }
-
-        // 分隔符：仅当时间+地点都存在时显示
-        boolean hasTime = item.dueAt > 0;
-        v.setViewVisibility(R.id.task_separator,
-                (hasTime && hasLocation) ? View.VISIBLE : View.GONE);
-
-        // 复选框图片（未完成状态，因为已完成的不会进入此列表）
-        v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_unchecked);
-
-        // 文字样式
-        v.setInt(R.id.task_text, "setPaintFlags", Paint.ANTI_ALIAS_FLAG);
-        v.setTextColor(R.id.task_text,
-                context.getResources().getColor(R.color.widget_text_primary, null));
-        v.setTextColor(R.id.task_time,
-                context.getResources().getColor(R.color.widget_text_secondary, null));
-        v.setTextColor(R.id.task_location,
-                context.getResources().getColor(R.color.widget_text_secondary, null));
-
-        // 复选框点击 → 标记完成（从小组件移除）
-        Intent completeIntent = new Intent(context, TodoWidgetProvider.class);
-        completeIntent.setAction(ACTION_COMPLETE);
-        completeIntent.putExtra(EXTRA_TODO_ID, item.id);
-        completeIntent.setData(Uri.parse("todo://" + item.id));
-        PendingIntent pi = PendingIntent.getBroadcast(
-                context, item.id.hashCode(), completeIntent,
-                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        v.setOnClickPendingIntent(R.id.task_checkbox, pi);
-
-        return v;
+        // 通知 ListView 数据已变更，触发 RemoteViewsFactory 重新加载
+        manager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_task_container);
     }
 
     // ---- 数据读取 ----
