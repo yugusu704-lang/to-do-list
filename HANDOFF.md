@@ -1,8 +1,8 @@
 # HANDOFF.md — 项目交接文档
 
-> 生成时间：2026-07-30
+> 生成时间：2026-07-31（v12 更新）
 > 开发环境：VS Code + Claude 插件
-> 前期调试工具：Hermes Agent（已迁移至 VS Code）
+> 测试设备：Xiaomi 14 (MIUI, Android 15, API 34+)
 
 ---
 
@@ -12,27 +12,31 @@
 **待办清单 (To-Do List)** — Android 桌面小组件待办应用
 
 ### 1.2 技术栈
-| 层级 | 技术 |
-|------|------|
-| 前端框架 | React + Vite |
-| 样式 | Tailwind CSS |
-| 移动端框架 | Capacitor |
-| 目标平台 | Android (API 26+) |
-| 测试设备 | Xiaomi 14 (MIUI, Android 15) |
-| 语言 | JavaScript (前端) + Java (Android 原生) |
+| 层级 | 技术 | 版本 |
+|------|------|------|
+| 前端框架 | React + Vite | React 18+ / Vite 8.x |
+| 样式 | Tailwind CSS | v4 |
+| 移动端框架 | Capacitor | 8.4.2 |
+| 目标平台 | Android (API 34+) | Android 14+ |
+| 测试设备 | Xiaomi 14 (MIUI, Android 15) | — |
+| 语言 | JavaScript (前端) + Java (Android 原生) | JDK 17 |
 
 ### 1.3 仓库信息
 - **GitHub**: https://github.com/yugusu704-lang/to-do-list
-- **最新 Release**: v8（GitHub Releases 页面）
+- **最新 Release**: v12（GitHub Releases 页面）
 - **项目路径**: `D:\to-do-list`
+- **当前分支**: `master`
 
 ### 1.4 核心功能
 1. 待办任务 CRUD（创建、读取、更新、删除）
 2. 任务支持：内容文字、截止时间（dueAt）、地点（location）
 3. Android 桌面小组件（4×2 和 4×3 两种尺寸）
 4. 小组件显示"今日待办"（只显示 dueAt 在今天的未完成任务）
-5. 小组件内点击复选框可标记完成（完成后从小组件中移除）
-6. SharedPreferences 统一数据源（Web 端 + 原生共享）
+5. 小组件支持**垂直滚动浏览**（v12 新增，ListView + RemoteViewsService）
+6. 小组件内点击复选框可标记完成（完成后从小组件中移除）
+7. SharedPreferences 统一数据源（Web 端 + 原生共享）
+8. 按日期分组显示（今天/明天/后天/具体日期/已过期）
+9. 自动清理 30 天以上已完成任务
 
 ---
 
@@ -41,7 +45,7 @@
 ```
 D:\to-do-list\
 ├── CLAUDE.md                          # Claude 技术规范文档
-├── DEVELOPMENT.md                     # 开发阶段指南（含 skill 方法论）
+├── DEVELOPMENT.md                     # 开发阶段指南
 ├── HANDOFF.md                         # 本文件 - 交接文档
 ├── package.json
 ├── vite.config.js                     # Vite 配置（含 base: './'）
@@ -49,11 +53,13 @@ D:\to-do-list\
 ├── index.html                         # 入口 HTML
 ├── src/
 │   ├── main.jsx                       # React 入口
-│   ├── App.jsx                        # 主应用组件
+│   ├── App.jsx                        # 主应用组件（生命周期、数据同步）
 │   ├── components/
 │   │   ├── AddTodo.jsx                # 添加任务表单（含 DateButton）
 │   │   ├── DateButton.jsx             # 日期选择器组件
-│   │   ├── TodoList.jsx               # 任务列表
+│   │   ├── FilterTabs.jsx             # 筛选标签（全部/进行中/已完成）
+│   │   ├── EmptyState.jsx             # 空状态占位
+│   │   ├── TodoList.jsx               # 任务列表（按日期分组）
 │   │   └── TodoItem.jsx               # 单条任务
 │   ├── hooks/
 │   │   └── useTodos.js                # 核心数据管理 Hook
@@ -65,35 +71,33 @@ D:\to-do-list\
 │   └── app/
 │       ├── build.gradle               # Android 构建配置
 │       └── src/main/
-│           ├── AndroidManifest.xml    # 权限声明
+│           ├── AndroidManifest.xml    # 权限声明 + Service 注册
 │           ├── java/com/example/todolist/
 │           │   ├── MainActivity.java
 │           │   ├── TodoStoragePlugin.java  # SharedPreferences 读写插件
 │           │   └── widget/
-│           │       ├── TodoWidgetProvider.java      # 4×3 小组件 Provider
-│           │       ├── TodoWidgetProviderLarge.java  # 4×2 小组件 Provider（继承自 4×3）
-│           │       ├── TodoWidgetRefreshReceiver.java # 定时刷新广播
-│           │       └── TodoWidgetHelper.java         # 辅助类
+│           │       ├── TodoWidgetProvider.java         # 4x2 小组件 Provider
+│           │       ├── TodoWidgetProviderLarge.java     # 4x3 小组件 Provider（子类）
+│           │       ├── TodoWidgetViewsFactory.java      # ListView 数据适配器（v12 新增）
+│           │       ├── TodoWidgetViewsService.java      # RemoteViewsService（v12 新增）
+│           │       └── TodoWidgetRefreshReceiver.java   # 定时刷新广播
 │           └── res/
 │               ├── layout/
-│               │   ├── widget_todo_4x2.xml    # 4×2 小组件布局
-│               │   ├── widget_todo_4x3.xml    # 4×3 小组件布局
+│               │   ├── widget_todo_4x2.xml    # 4x2 小组件布局（ListView）
+│               │   ├── widget_todo_4x3.xml    # 4x3 小组件布局（ListView）
 │               │   └── widget_task_item.xml   # 单条任务行布局
 │               ├── drawable/
 │               │   ├── widget_bg.xml          # 小组件背景
 │               │   ├── ic_widget_add.xml      # 添加按钮图标
-│               │   ├── ic_checkbox_checked.xml    # 已选中复选框（绿色圆+白色对勾）
-│               │   ├── ic_checkbox_unchecked.xml  # 未选中复选框（空心圆）
-│               │   ├── ic_check_white.xml         # 白色对勾矢量图
+│               │   ├── ic_checkbox_checked.xml    # 已选中复选框
+│               │   ├── ic_checkbox_unchecked.xml  # 未选中复选框
 │               │   ├── ic_clock_12dp.xml          # 时钟图标
 │               │   └── ic_location_12dp.xml       # 位置图标
 │               ├── values/
-│               │   ├── colors.xml             # 颜色定义
-│               │   └── widget_colors.xml      # 小组件专用颜色
+│               │   └── widget_colors.xml      # 小组件颜色（含深色模式）
 │               └── xml/
-│                   └── todo_widget_info.xml   # 小组件元数据
-├── skills/                            # 导出的 skill 文件（供 Claude 插件参考）
-└── figma-reference/                   # Figma 设计参考文件
+│                   ├── widget_todo_4x2_info.xml
+│                   └── widget_todo_4x3_info.xml
 ```
 
 ---
@@ -158,35 +162,56 @@ D:\to-do-list\
 
 **解决**: 如果没有设置 `dueAt`，使用 `createdAt` 作为默认值（注意：用户后来要求恢复为"没有时间的任务不显示"）。
 
+### 3.9 小组件无法滚动（v12）
+
+**问题**: 小组件使用 `LinearLayout` + `addView()` 显示任务，无法滚动，超出可视区域的任务被直接裁切。
+
+**解决**:
+1. 将 `LinearLayout` 替换为 `ListView`
+2. 新增 `TodoWidgetViewsFactory`（RemoteViewsFactory 实现）
+3. 新增 `TodoWidgetViewsService`（RemoteViewsService）
+4. Provider 改用 `setRemoteAdapter()` 绑定 ListView
+
+### 3.10 小组件 checkbox 点击失效（v12）
+
+**问题**: ListView 中的 `setOnClickPendingIntent` 不可靠，点击无响应。
+
+**解决**: 改用 `setPendingIntentTemplate` + `setFillInIntent` 标准模式：
+- Provider 设置模板 PendingIntent（显式 Intent + FLAG_IMMUTABLE）
+- Factory 通过 `setOnClickFillInIntent` 携带 todo_id
+
+### 3.11 Android 14+ PendingIntent 崩溃（v12）
+
+**问题**: `setPendingIntentTemplate` 使用隐式 Intent + `FLAG_MUTABLE`，Android 14（API 34）禁止此组合，导致崩溃。崩溃发生在 `TodoStoragePlugin.save()` → `refreshAllWidgets()` → `updateWidget()` 时，每次保存数据都会崩溃。
+
+**解决**:
+1. 改为**显式 Intent**（设置 ComponentName + Package）
+2. 使用 `FLAG_IMMUTABLE` 替代 `FLAG_MUTABLE`
+
 ---
 
-## 四、当前状态（待修复）
+## 四、当前状态（v12）
 
-### 4.1 小组件显示逻辑（核心待修复）
+### 4.1 已完成的功能
 
-**用户最新要求**:
-1. ✅ 小组件显示"今日待办"——只显示 dueAt 在今天的未完成任务
-2. ✅ 每个任务显示：任务内容 + 时间 + 地点
-3. ✅ 按时间顺序排列
-4. ✅ 任务过多时可滑动显示
-5. ✅ 完成后从小组件中移除
-6. ❌ **没有时间标注的任务不要显示在小组件中**
-7. ⚠️ 排版需要更美观清晰，字体需要更大更清晰
+| 功能 | 状态 |
+|------|------|
+| 任务 CRUD | ✅ 完成 |
+| 数据持久化（SharedPreferences） | ✅ 完成 |
+| 桌面小组件（4x2 + 4x3） | ✅ 完成 |
+| 小组件滚动浏览 | ✅ 完成（v12） |
+| 小组件 checkbox 标记完成 | ✅ 完成（v12 修复） |
+| 小组件每日午夜刷新 | ✅ 完成 |
+| 按日期分组显示 | ✅ 完成 |
+| 自动清理 30 天以上已完成任务 | ✅ 完成 |
+| Android 14+ 兼容性 | ✅ 完成（v12 修复） |
 
-**当前问题**: 
-- 用户创建了没有时间的任务，不应该显示在小组件中
-- 需要确认：用户是否为任务设置了 dueAt（截止时间）？如果没设置，小组件会显示"今天没有待办任务"
+### 4.2 待优化
 
-### 4.2 小组件布局问题
-
-当前 `widget_task_item.xml` 使用垂直布局（LinearLayout vertical），包含：
-- 复选框（ImageView）
-- 任务文字（16sp 加粗）
-- 时间 + 地点行（13sp，带图标）
-
-**待优化**:
-- 排版间距可能需要调整
-- 字体大小可能需要根据用户反馈微调
+- 小组件排版可能需要根据用户反馈微调
+- 深色模式适配（小组件已支持，App 侧待实现）
+- 拖拽排序任务
+- 正式发布签名配置（keystore）
 
 ---
 
@@ -221,45 +246,45 @@ const newTodo = {
 
 ```java
 // TodoWidgetProvider.java → loadTodayTodos()
+// TodoWidgetViewsFactory.java → loadTodayTodos()（同逻辑）
 // 过滤条件：
 // 1. dueAt 存在且不为 null
 // 2. dueAt 在今天 0:00 ~ 明天 0:00 之间
 // 3. completed == false（未完成）
-// 4. 如果 dueAt 为 null，使用 createdAt 作为默认值（待移除）
 // 排序：按 dueAt 升序
 ```
 
-### 5.4 小组件刷新机制
+### 5.4 小组件架构（v12）
+
+```
+TodoWidgetProvider.updateWidget()
+  → setRemoteAdapter(R.id.widget_task_container, serviceIntent)  // 绑定 ListView
+  → setPendingIntentTemplate(...)                                 // 点击模板（显式 Intent）
+  → notifyAppWidgetViewDataChanged()                              // 触发数据刷新
+
+TodoWidgetViewsService.onGetViewFactory()
+  → 返回 TodoWidgetViewsFactory 实例
+
+TodoWidgetViewsFactory.getViewAt(position)
+  → 创建 RemoteViews（widget_task_item.xml）
+  → setOnClickFillInIntent(root, intent)  // 携带 todo_id
+```
+
+### 5.5 小组件刷新机制
 
 ```java
 // TodoWidgetRefreshReceiver.java
-// 每日 0:00 定时刷新
+// 每日 0:00 定时刷新（AlarmManager.setExactAndAllowWhileIdle）
 // 调用: TodoWidgetProvider.refreshAllWidgets(context)
 ```
 
-### 5.5 Capacitor 配置
-
-```json
-// capacitor.config.json
-{
-  "appId": "com.example.todolist",
-  "appName": "待办清单",
-  "webDir": "dist"
-}
-```
-
-### 5.6 Vite 配置
+### 5.6 Vite 配置（重要）
 
 ```javascript
 // vite.config.js
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   base: './',  // 关键：使用相对路径，否则 Capacitor 8 找不到资源
-  test: {
-    environment: 'jsdom',
-    setupFiles: './src/setupTests.js',
-    globals: true,
-  },
 });
 ```
 
@@ -274,7 +299,6 @@ android {
         }
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
@@ -296,20 +320,26 @@ android {
 - Capacitor 8 把文件放在 `assets/public/` 子目录
 - 必须在 `vite.config.js` 中设置 `base: './'`
 
-### 6.3 RemoteViews 限制
+### 6.3 Android 14+ PendingIntent 限制（v12 新增）
 
-- 只支持有限的控件类型（TextView, ImageView, Button, LinearLayout 等）
-- 不支持自定义 View
-- `addView()` 只能添加到 `LinearLayout` 容器
-- 不支持 `setPadding()` 等部分方法
+- **禁止**: 隐式 Intent + `FLAG_MUTABLE`
+- **必须**: 显式 Intent（设置 ComponentName + Package）+ `FLAG_IMMUTABLE`
+- 崩溃发生在 `PendingIntent.getBroadcast()` 调用处
 
-### 6.4 数据格式
+### 6.4 ListView + RemoteViewsFactory 注意事项
+
+- `setOnClickPendingIntent` 在 ListView 行中**不可靠**
+- **必须**使用 `setPendingIntentTemplate` + `setFillInIntent` 模式
+- `setFillInIntent` 需要目标视图设置 `focusable="true"` 和 `clickable="true"`
+- 根视图需要有 `android:id`（如 `widget_task_item_root`）
+
+### 6.5 数据格式
 
 - `dueAt` 在 Web 端存储为 ISO 格式字符串 `"2026-07-30T10:30"`
 - `createdAt` 存储为时间戳数字 `1753881600000`
 - SharedPreferences 中存储为 JSON 数组字符串
 
-### 6.5 ADB 调试
+### 6.6 ADB 调试
 
 ```bash
 # ADB 路径
@@ -321,37 +351,33 @@ adb install -r D:\to-do-list\android\app\build\outputs\apk\debug\app-debug.apk
 # 启动 App
 adb shell am start -n com.example.todolist/.MainActivity
 
-# 查看日志
-adb logcat -d | grep -E "(com.example.todolist|FATAL|Exception)"
+# 查看崩溃日志
+adb logcat -d | grep -E "(FATAL|AndroidRuntime|Exception)" | grep -v "libsensor"
 
 # 查看进程
-adb shell ps | grep com.example.todolist
+adb shell pidof com.example.todolist
 ```
 
-### 6.6 Gradle 构建
+### 6.7 Gradle 构建
 
 ```bash
 cd D:\to-do-list\android
 JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew installDebug
 ```
 
 ---
 
 ## 七、后续待办
 
-### 7.1 立即修复
+### 7.1 功能完善
 
-1. **移除 createdAt 默认值逻辑**: 没有时间的任务不应显示在小组件中
-2. **确认用户数据**: 检查用户是否为任务设置了 dueAt
-3. **排版优化**: 根据用户反馈调整字体大小和间距
+1. **拖拽排序**: 可考虑 dnd-kit 或 react-beautiful-dnd
+2. **小部件点击交互**: 点击任务行打开 App 对应任务
+3. **深色模式**: App 侧适配（小部件已支持 widget_colors.xml 深色模式）
+4. **正式发布签名**: 配置 keystore 用于 release 构建
 
-### 7.2 功能完善
-
-1. **滑动显示**: 当前使用 `LinearLayout` + `addView()`，如果任务过多可能需要改用 `ListView`（RemoteViews 支持）
-2. **小组件点击交互**: 点击小组件空白区域打开 App
-3. **小组件刷新**: 每日 0:00 自动刷新（已实现，待验证）
-
-### 7.3 代码质量
+### 7.2 代码质量
 
 1. **单元测试**: 使用 Vitest 编写前端测试
 2. **代码审查**: 检查安全性和性能
@@ -372,14 +398,15 @@ npm run dev
 
 # 构建前端
 npm run build
-
-# 复制到 Android 项目
-npx cap copy android
 ```
 
 ### 8.2 Android 构建
 
 ```bash
+# 同步 Web 资源到 Android
+npx cap sync
+
+# 构建 debug APK
 cd android
 JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
 ```
@@ -387,7 +414,10 @@ JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
 ### 8.3 部署到设备
 
 ```bash
+# 安装
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+
+# 启动
 adb shell am start -n com.example.todolist/.MainActivity
 ```
 
@@ -396,11 +426,13 @@ adb shell am start -n com.example.todolist/.MainActivity
 ```bash
 # 提交更改
 git add -A
-git commit -m "fix: 描述"
+git commit -m "feat: 描述"
 git push origin master
 
 # 创建 Release
-gh release create v9 app-v9.apk --title "v9 - 标题" --notes "发布说明"
+gh release create vXX android/app/build/outputs/apk/debug/app-debug.apk \
+  --title "vXX - 标题" \
+  --notes "发布说明"
 ```
 
 ---
@@ -409,15 +441,15 @@ gh release create v9 app-v9.apk --title "v9 - 标题" --notes "发布说明"
 
 ### 9.1 项目内文档
 
-- `CLAUDE.md`: Claude 技术规范
-- `DEVELOPMENT.md`: 开发阶段指南（含 skill 方法论）
-- `skills/`: 导出的 skill 文件（11 个）
+- `CLAUDE.md`: Claude 技术规范（设计规范、TDD 流程、调试规范）
+- `DEVELOPMENT.md`: 开发阶段指南
 
 ### 9.2 外部参考
 
 - [Capacitor 文档](https://capacitorjs.com/docs)
 - [Android App Widgets](https://developer.android.com/develop/ui/views/appwidgets)
 - [RemoteViews](https://developer.android.com/reference/android/widget/RemoteViews)
+- [RemoteViewsService](https://developer.android.com/reference/android/widget/RemoteViewsService)
 - [Vite 配置](https://vitejs.dev/config/)
 
 ---
@@ -429,4 +461,4 @@ gh release create v9 app-v9.apk --title "v9 - 标题" --notes "发布说明"
 
 ---
 
-**注意**: 本文档由 Hermes Agent 自动生成，用于在 VS Code + Claude 插件中继续开发。如有疑问，请参考项目内文档或外部参考链接。
+**注意**: 本文档用于在 VSCode Cline 插件中接手开发。如有疑问，请参考项目内文档或外部参考链接。
