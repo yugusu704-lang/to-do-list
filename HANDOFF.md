@@ -1,6 +1,6 @@
 # HANDOFF.md — 项目交接文档
 
-> 生成时间：2026-07-31（v12 更新）
+> 生成时间：2026-07-31（v14 更新）
 > 开发环境：VS Code + Claude 插件
 > 测试设备：Xiaomi 14 (MIUI, Android 15, API 34+)
 
@@ -23,7 +23,7 @@
 
 ### 1.3 仓库信息
 - **GitHub**: https://github.com/yugusu704-lang/to-do-list
-- **最新 Release**: v12（GitHub Releases 页面）
+- **最新 Release**: v14（GitHub Releases 页面）
 - **项目路径**: `D:\to-do-list`
 - **当前分支**: `master`
 
@@ -375,7 +375,7 @@ JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew installDebug
 1. **拖拽排序**: 可考虑 dnd-kit 或 react-beautiful-dnd
 2. **小部件点击交互**: 点击任务行打开 App 对应任务
 3. **深色模式**: App 侧适配（小部件已支持 widget_colors.xml 深色模式）
-4. **正式发布签名**: 配置 keystore 用于 release 构建
+4. ~~**正式发布签名**~~: ✅ 已在 v14 完成（统一签名，升级不丢数据）
 
 ### 7.2 代码质量
 
@@ -423,16 +423,37 @@ adb shell am start -n com.example.todolist/.MainActivity
 
 ### 8.4 发布到 GitHub
 
+> ⚠️ **签名密钥约定（v14 起强制）**
+> - 密钥文件：`android/keystore/release.keystore`（**不提交 Git**，公开仓库严禁泄露！）
+> - 所有 debug/release 构建均使用该密钥签名 → 覆盖安装保留数据
+> - **换电脑开发时，必须手动拷贝该密钥文件**，否则新签名会导致升级丢数据
+> - **请自行备份密钥**到网盘/安全位置（密钥丢失 = 无法升级旧版本）
+> - 密钥信息：默认 Android Debug 证书（alias: `androiddebugkey`，口令 `android`，来源 `C:\Users\long\.android\debug.keystore`）
+
 ```bash
 # 提交更改
 git add -A
 git commit -m "feat: 描述"
 git push origin master
 
-# 创建 Release
-gh release create vXX android/app/build/outputs/apk/debug/app-debug.apk \
+# 构建正式签名 release APK
+cd android
+JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleRelease
+
+# 创建 Release（必须上传 release APK，勿用 debug 目录产物）
+gh release create vXX android/app/build/outputs/apk/release/app-release.apk \
   --title "vXX - 标题" \
   --notes "发布说明"
+```
+
+### 8.5 升级保留数据验证（每次发布前必做）
+
+```bash
+# 1. 手机已装旧版且有任务数据 → 覆盖安装新版
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+
+# 2. 打开 App 确认任务数据完整保留
+adb shell am start -n com.example.todolist/.MainActivity
 ```
 
 ---
