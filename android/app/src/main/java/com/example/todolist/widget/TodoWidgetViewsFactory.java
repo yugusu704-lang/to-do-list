@@ -98,8 +98,15 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         v.setViewVisibility(R.id.task_separator,
                 (hasTime && hasLocation) ? android.view.View.VISIBLE : android.view.View.GONE);
 
-        // 复选框图片（未完成状态）
-        v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_unchecked);
+        // 复选框：完成动效中的任务显示绿勾并按帧淡出，其余为空心圆
+        Float alpha = TodoWidgetProvider.completingRows.get(item.id);
+        if (alpha != null) {
+            v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_checked);
+            v.setFloat(R.id.widget_task_item_root, "setAlpha", alpha);
+        } else {
+            v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_unchecked);
+            v.setFloat(R.id.widget_task_item_root, "setAlpha", 1f);
+        }
 
         // 文字样式
         v.setInt(R.id.task_text, "setPaintFlags", Paint.ANTI_ALIAS_FLAG);
@@ -160,8 +167,9 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
 
-                // 未完成任务才显示
-                if (obj.optBoolean("completed", false)) continue;
+                // 未完成任务才显示；仅"完成动效"播放期间短暂保留刚完成的行
+                if (obj.optBoolean("completed", false)
+                        && !TodoWidgetProvider.completingRows.containsKey(obj.getString("id"))) continue;
 
                 // 解析 dueAt
                 long dueAt = parseDueAt(obj);

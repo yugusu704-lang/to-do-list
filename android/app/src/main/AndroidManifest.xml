@@ -30,7 +30,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.todolist.TOGGLE_TODO" />
+                <action android:name="com.example.todolist.COMPLETE_TODO" />
                 <action android:name="com.example.todolist.ADD_TODO" />
             </intent-filter>
             <meta-data
@@ -44,7 +44,7 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
-                <action android:name="com.example.todolist.TOGGLE_TODO" />
+                <action android:name="com.example.todolist.COMPLETE_TODO" />
                 <action android:name="com.example.todolist.ADD_TODO" />
             </intent-filter>
             <meta-data

@@ -20,46 +20,54 @@ function getDateLabel(dueAt) {
   return `${due.getMonth() + 1}月${due.getDate()}日`;
 }
 
+// 本地日期键 YYYY-MM-DD（字符串字典序 = 日期升序）
+function toDateKey(date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 // 组内排序：按 dueAt 时间升序（时间更早的靠上）
 function sortByDueTime(a, b) {
   return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
 }
 
-// 按日期分组，无日期排最后
+// 按日期键分组：无日期排最前，其余按日期键升序（字典序即日期升序，跨月/同月均正确）
 function groupByDueDate(todos) {
-  const groups = {};
+  const groups = new Map(); // 日期键 -> { label, items }
   const noDate = [];
 
   todos.forEach((todo) => {
-    const label = getDateLabel(todo.dueAt);
-    if (label) {
-      if (!groups[label]) groups[label] = [];
-      groups[label].push(todo);
-    } else {
+    const due = todo.dueAt ? new Date(todo.dueAt) : null;
+    if (!due || isNaN(due.getTime())) {
       noDate.push(todo);
+      return;
     }
+    const dateKey = toDateKey(due);
+    if (!groups.has(dateKey)) {
+      groups.set(dateKey, { label: getDateLabel(due), items: [] });
+    }
+    groups.get(dateKey).items.push(todo);
   });
 
-  // 每个分组内按时间升序排列（无日期的任务保持原顺序，新添加的在前）
-  Object.values(groups).forEach((items) => items.sort(sortByDueTime));
+  // 组内按时间升序；无日期组保持原顺序（新添加的在前）
+  groups.forEach((g) => g.items.sort(sortByDueTime));
 
-  // 排序：已过期 → 今天 → 明天 → 后天 → 更远日期 → 无日期
-  const order = ['已过期', '今天', '明天', '后天'];
+  // 日期键升序 → 已过期/今天/明天/后天/未来日期按时间自然排列
+  const dateSorted = [...groups.entries()].sort(([ka], [kb]) => ka.localeCompare(kb));
+
+  // 同一标签只保留一个分组头，后续同标签桶按顺序拼接（合并多个"已过期"日期）
   const sorted = {};
-  order.forEach((k) => {
-    if (groups[k]) sorted[k] = groups[k];
+  dateSorted.forEach(([, g]) => {
+    if (!sorted[g.label]) sorted[g.label] = [];
+    sorted[g.label].push(...g.items);
   });
-  // 按日期排序剩余分组
-  const remaining = Object.entries(groups)
-    .filter(([k]) => !order.includes(k))
-    .sort(([a], [b]) => a.localeCompare(b, 'zh-CN'));
-  remaining.forEach(([k, v]) => {
-    sorted[k] = v;
-  });
-  if (noDate.length > 0) {
-    sorted['无日期'] = noDate;
-  }
 
+  // 无日期任务固定在列表最顶部（仅当存在无日期任务时）
+  if (noDate.length > 0) {
+    return { '无日期': noDate, ...sorted };
+  }
   return sorted;
 }
 

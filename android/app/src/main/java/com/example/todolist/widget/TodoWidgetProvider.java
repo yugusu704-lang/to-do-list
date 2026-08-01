@@ -8,6 +8,9 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
 import android.view.View;
 import android.widget.RemoteViews;
 
@@ -25,6 +28,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class TodoWidgetProvider extends AppWidgetProvider {
 
@@ -33,6 +37,16 @@ public class TodoWidgetProvider extends AppWidgetProvider {
     private static final String ACTION_COMPLETE = "com.example.todolist.COMPLETE_TODO";
     private static final String ACTION_ADD = "com.example.todolist.ADD_TODO";
     private static final String EXTRA_TODO_ID = "todo_id";
+    private static final String TAG = "TodoWidget";
+
+    // ---- 完成动效：id -> 当前帧透明度（1.0=不透明），工厂按帧读取 ----
+    static final ConcurrentHashMap<String, Float> completingRows = new ConcurrentHashMap<>();
+    private static final float ANIM_ALPHA_1 = 1.0f;
+    private static final float ANIM_ALPHA_2 = 0.45f;
+    private static final float ANIM_ALPHA_3 = 0.12f;
+    private static final long ANIM_STEP_1_MS = 150L;
+    private static final long ANIM_STEP_2_MS = 280L;
+    private static final long ANIM_REMOVE_MS = 380L;
 
     // ---- 生命周期 ----
 
@@ -51,7 +65,7 @@ public class TodoWidgetProvider extends AppWidgetProvider {
             String todoId = intent.getStringExtra(EXTRA_TODO_ID);
             if (todoId != null) {
                 markCompleted(context, todoId);
-                refreshAllWidgets(context);
+                startCompleteAnimation(context, todoId);
             }
         } else if (ACTION_ADD.equals(action)) {
             openAppToAdd(context);
@@ -60,8 +74,9 @@ public class TodoWidgetProvider extends AppWidgetProvider {
 
     // ---- 渲染 ----
 
+    // 4x2 小部件使用 4x2 布局（Large 子类覆写为 4x3）
     protected int getLayoutResId() {
-        return R.layout.widget_todo_4x3;
+        return R.layout.widget_todo_4x2;
     }
 
     private void updateWidget(Context context, AppWidgetManager manager, int widgetId) {
@@ -123,8 +138,9 @@ public class TodoWidgetProvider extends AppWidgetProvider {
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
 
-                // 未完成任务才显示
-                if (obj.optBoolean("completed", false)) continue;
+                // 未完成任务才显示；仅"完成动效"播放期间短暂保留刚完成的行
+                if (obj.optBoolean("completed", false)
+                        && !completingRows.containsKey(obj.getString("id"))) continue;
 
                 // 解析 dueAt
                 long dueAt = parseDueAt(obj);
@@ -211,7 +227,8 @@ public class TodoWidgetProvider extends AppWidgetProvider {
                 }
             }
             prefs.edit().putString(KEY_TODOS, arr.toString()).apply();
-        } catch (Exception ignored) {
+        } catch (Exception e) {
+            Log.e(TAG, "markCompleted failed for " + todoId, e);
         }
     }
 
@@ -229,6 +246,40 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         }
         if (ids4x3.length > 0) {
             new TodoWidgetProviderLarge().onUpdate(context, manager, ids4x3);
+        }
+    }
+
+    // 点击完成 → 播放动效：绿勾 → 淡出 → 移除；同一 id 未播完时不重复
+    private void startCompleteAnimation(Context context, String todoId) {
+        if (completingRows.containsKey(todoId)) return;
+        completingRows.put(todoId, ANIM_ALPHA_1);
+        notifyAllWidgetsDataChanged(context);
+        Handler h = new Handler(Looper.getMainLooper());
+        h.postDelayed(() -> {
+            completingRows.put(todoId, ANIM_ALPHA_2);
+            notifyAllWidgetsDataChanged(context);
+        }, ANIM_STEP_1_MS);
+        h.postDelayed(() -> {
+            completingRows.put(todoId, ANIM_ALPHA_3);
+            notifyAllWidgetsDataChanged(context);
+        }, ANIM_STEP_2_MS);
+        h.postDelayed(() -> {
+            completingRows.remove(todoId);
+            refreshAllWidgets(context);
+        }, ANIM_REMOVE_MS);
+    }
+
+    // 仅通知 ListView 数据变化（工厂按最新帧重渲染），不重建整个小部件，避免闪烁
+    private static void notifyAllWidgetsDataChanged(Context context) {
+        AppWidgetManager manager = AppWidgetManager.getInstance(context);
+        ComponentName[] providers = {
+                new ComponentName(context, TodoWidgetProvider.class),
+                new ComponentName(context, TodoWidgetProviderLarge.class)
+        };
+        for (ComponentName cn : providers) {
+            for (int id : manager.getAppWidgetIds(cn)) {
+                manager.notifyAppWidgetViewDataChanged(id, R.id.widget_task_container);
+            }
         }
     }
 
