@@ -20,6 +20,11 @@ function getDateLabel(dueAt) {
   return `${due.getMonth() + 1}月${due.getDate()}日`;
 }
 
+// 组内排序：按 dueAt 时间升序（时间更早的靠上）
+function sortByDueTime(a, b) {
+  return new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime();
+}
+
 // 按日期分组，无日期排最后
 function groupByDueDate(todos) {
   const groups = {};
@@ -34,6 +39,9 @@ function groupByDueDate(todos) {
       noDate.push(todo);
     }
   });
+
+  // 每个分组内按时间升序排列（无日期的任务保持原顺序，新添加的在前）
+  Object.values(groups).forEach((items) => items.sort(sortByDueTime));
 
   // 排序：已过期 → 今天 → 明天 → 后天 → 更远日期 → 无日期
   const order = ['已过期', '今天', '明天', '后天'];
@@ -71,7 +79,7 @@ export default function TodoList({ todos, filter, onToggle, onDelete }) {
   const groups = groupByDueDate(filtered);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 overflow-y-auto px-4 py-3">
+    <div className="flex flex-1 flex-col gap-4 px-4 py-3">
       {Object.entries(groups).map(([date, items]) => (
         <div key={date} className="flex flex-col gap-2">
           <div className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">

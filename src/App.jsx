@@ -89,7 +89,7 @@ export default function App() {
   }, [toast]);
 
   return (
-    <div className="flex min-h-dvh flex-col bg-bg">
+    <div className="flex h-dvh flex-col overflow-hidden bg-bg">
       {/* 标题区 */}
       <header className="px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-3">
         <div className="flex items-baseline justify-between">
@@ -112,8 +112,8 @@ export default function App() {
       {/* 筛选栏 */}
       <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
 
-      {/* 任务列表 */}
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      {/* 任务列表（独立滚动区，底部导航栏固定不动） */}
+      <div className="min-h-0 flex-1 overflow-y-auto">
         <TodoList
           key={dayKey}
           todos={todos}
@@ -129,7 +129,7 @@ export default function App() {
       {/* 撤销 toast */}
       {toast && (
         <div
-          className="fixed bottom-24 left-1/2 -translate-x-1/2 animate-[fadeInUp_0.2s_ease-out]"
+          className="fixed bottom-28 left-1/2 z-10 -translate-x-1/2 animate-[fadeInUp_0.2s_ease-out]"
           role="status"
           aria-live="polite"
         >

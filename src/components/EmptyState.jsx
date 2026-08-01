@@ -9,7 +9,7 @@ export default function EmptyState({ filter = 'all' }) {
   const { title, subtitle } = messages[filter];
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-20">
+    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-10">
       {/* 装饰圆环 */}
       <div className="relative mb-2">
         <div className="h-16 w-16 rounded-full border-2 border-dashed border-[#D6D3D1] opacity-40" />

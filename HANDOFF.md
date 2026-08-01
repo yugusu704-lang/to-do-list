@@ -1,6 +1,6 @@
 # HANDOFF.md — 项目交接文档
 
-> 生成时间：2026-07-31（v14 更新）
+> 生成时间：2026-08-01（v15 更新）
 > 开发环境：VS Code + Claude 插件
 > 测试设备：Xiaomi 14 (MIUI, Android 15, API 34+)
 
@@ -23,7 +23,7 @@
 
 ### 1.3 仓库信息
 - **GitHub**: https://github.com/yugusu704-lang/to-do-list
-- **最新 Release**: v14（GitHub Releases 页面）
+- **最新 Release**: v15（GitHub Releases 页面）
 - **项目路径**: `D:\to-do-list`
 - **当前分支**: `master`
 
@@ -37,6 +37,8 @@
 7. SharedPreferences 统一数据源（Web 端 + 原生共享）
 8. 按日期分组显示（今天/明天/后天/具体日期/已过期）
 9. 自动清理 30 天以上已完成任务
+10. **底部导航栏固定**（v15 新增，筛选标签和添加按钮不随列表滚动）
+11. **任务按时间排序**（v15 新增，无时间任务在前，有任务按截止时间升序）
 
 ---
 
@@ -190,7 +192,7 @@ D:\to-do-list\
 
 ---
 
-## 四、当前状态（v12）
+## 四、当前状态（v15）
 
 ### 4.1 已完成的功能
 
@@ -205,6 +207,8 @@ D:\to-do-list\
 | 按日期分组显示 | ✅ 完成 |
 | 自动清理 30 天以上已完成任务 | ✅ 完成 |
 | Android 14+ 兼容性 | ✅ 完成（v12 修复） |
+| 底部导航栏固定 | ✅ 完成（v15） |
+| 任务按时间排序 | ✅ 完成（v15） |
 
 ### 4.2 待优化
 
@@ -215,9 +219,33 @@ D:\to-do-list\
 
 ---
 
-## 五、关键代码位置
+## 五、v15 更新内容（2026-08-01）
 
-### 5.1 数据模型
+### 5.1 底部导航栏固定
+
+**问题**: 添加按钮和筛选标签（全部/进行中/已完成）随任务列表一起滚动，任务多时用户需要滚动到底部才能找到添加按钮。
+
+**解决**: 将 `TodoList` 拆分为上下两部分布局：
+- 上部分：任务列表区域（`flex-1 overflow-y-auto`），可独立滚动
+- 下部分：底部导航区（`shrink-0`），始终固定在屏幕底部
+
+### 5.2 任务按时间排序
+
+**问题**: 任务列表按日期分组后，组内任务保持创建顺序，未按截止时间排列。
+
+**解决**: 在 `TodoList.jsx` 中对每组任务排序：
+- 无 `dueAt` 的任务排在最前
+- 有 `dueAt` 的任务按截止时间（`dueAt`）升序排列
+
+### 5.3 空状态显示优化
+
+修复空状态在小屏幕上被底部导航栏遮挡的问题（`padding-bottom` 适配）。
+
+---
+
+## 六、关键代码位置
+
+### 6.1 数据模型
 
 ```javascript
 // src/hooks/useTodos.js
@@ -233,7 +261,7 @@ const newTodo = {
 };
 ```
 
-### 5.2 SharedPreferences 数据存储
+### 6.2 SharedPreferences 数据存储
 
 ```java
 // TodoStoragePlugin.java
@@ -242,7 +270,7 @@ const newTodo = {
 // Value: JSON 数组字符串
 ```
 
-### 5.3 小组件数据过滤逻辑
+### 6.3 小组件数据过滤逻辑
 
 ```java
 // TodoWidgetProvider.java → loadTodayTodos()
@@ -254,7 +282,7 @@ const newTodo = {
 // 排序：按 dueAt 升序
 ```
 
-### 5.4 小组件架构（v12）
+### 6.4 小组件架构（v12）
 
 ```
 TodoWidgetProvider.updateWidget()
@@ -270,7 +298,7 @@ TodoWidgetViewsFactory.getViewAt(position)
   → setOnClickFillInIntent(root, intent)  // 携带 todo_id
 ```
 
-### 5.5 小组件刷新机制
+### 6.5 小组件刷新机制
 
 ```java
 // TodoWidgetRefreshReceiver.java
@@ -278,7 +306,7 @@ TodoWidgetViewsFactory.getViewAt(position)
 // 调用: TodoWidgetProvider.refreshAllWidgets(context)
 ```
 
-### 5.6 Vite 配置（重要）
+### 6.6 Vite 配置（重要）
 
 ```javascript
 // vite.config.js
@@ -288,7 +316,7 @@ export default defineConfig({
 });
 ```
 
-### 5.7 Android 构建配置
+### 6.7 Android 构建配置
 
 ```groovy
 // android/app/build.gradle
@@ -306,40 +334,40 @@ android {
 
 ---
 
-## 六、已知陷阱和注意事项
+## 七、已知陷阱和注意事项
 
-### 6.1 小米设备特殊处理
+### 7.1 小米设备特殊处理
 
 1. **CheckBox 不兼容**: 小米 Launcher 替换了标准 CheckBox，必须用 ImageView + drawable 切换
 2. **debuggable 启动卡死**: debug 版本必须设置 `debuggable false`
 3. **精确闹钟权限**: Android 12+ 需要 `SCHEDULE_EXACT_ALARM` 权限，且需要 try-catch 保护
 
-### 6.2 Capacitor 8 路径问题
+### 7.2 Capacitor 8 路径问题
 
 - Vite 构建输出路径为绝对路径 `/assets/xxx.js`
 - Capacitor 8 把文件放在 `assets/public/` 子目录
 - 必须在 `vite.config.js` 中设置 `base: './'`
 
-### 6.3 Android 14+ PendingIntent 限制（v12 新增）
+### 7.3 Android 14+ PendingIntent 限制（v12 新增）
 
 - **禁止**: 隐式 Intent + `FLAG_MUTABLE`
 - **必须**: 显式 Intent（设置 ComponentName + Package）+ `FLAG_IMMUTABLE`
 - 崩溃发生在 `PendingIntent.getBroadcast()` 调用处
 
-### 6.4 ListView + RemoteViewsFactory 注意事项
+### 7.4 ListView + RemoteViewsFactory 注意事项
 
 - `setOnClickPendingIntent` 在 ListView 行中**不可靠**
 - **必须**使用 `setPendingIntentTemplate` + `setFillInIntent` 模式
 - `setFillInIntent` 需要目标视图设置 `focusable="true"` 和 `clickable="true"`
 - 根视图需要有 `android:id`（如 `widget_task_item_root`）
 
-### 6.5 数据格式
+### 7.5 数据格式
 
 - `dueAt` 在 Web 端存储为 ISO 格式字符串 `"2026-07-30T10:30"`
 - `createdAt` 存储为时间戳数字 `1753881600000`
 - SharedPreferences 中存储为 JSON 数组字符串
 
-### 6.6 ADB 调试
+### 7.6 ADB 调试
 
 ```bash
 # ADB 路径
@@ -358,7 +386,7 @@ adb logcat -d | grep -E "(FATAL|AndroidRuntime|Exception)" | grep -v "libsensor"
 adb shell pidof com.example.todolist
 ```
 
-### 6.7 Gradle 构建
+### 7.7 Gradle 构建
 
 ```bash
 cd D:\to-do-list\android
@@ -368,16 +396,16 @@ JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew installDebug
 
 ---
 
-## 七、后续待办
+## 八、后续待办
 
-### 7.1 功能完善
+### 8.1 功能完善
 
 1. **拖拽排序**: 可考虑 dnd-kit 或 react-beautiful-dnd
 2. **小部件点击交互**: 点击任务行打开 App 对应任务
 3. **深色模式**: App 侧适配（小部件已支持 widget_colors.xml 深色模式）
 4. ~~**正式发布签名**~~: ✅ 已在 v14 完成（统一签名，升级不丢数据）
 
-### 7.2 代码质量
+### 8.2 代码质量
 
 1. **单元测试**: 使用 Vitest 编写前端测试
 2. **代码审查**: 检查安全性和性能
@@ -385,9 +413,9 @@ JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew installDebug
 
 ---
 
-## 八、构建和部署流程
+## 九、构建和部署流程
 
-### 8.1 开发环境
+### 9.1 开发环境
 
 ```bash
 # 安装依赖
@@ -400,7 +428,7 @@ npm run dev
 npm run build
 ```
 
-### 8.2 Android 构建
+### 9.2 Android 构建
 
 ```bash
 # 同步 Web 资源到 Android
@@ -411,7 +439,7 @@ cd android
 JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
 ```
 
-### 8.3 部署到设备
+### 9.3 部署到设备
 
 ```bash
 # 安装
@@ -421,7 +449,7 @@ adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 adb shell am start -n com.example.todolist/.MainActivity
 ```
 
-### 8.4 发布到 GitHub
+### 9.4 发布到 GitHub
 
 > ⚠️ **签名密钥约定（v14 起强制）**
 > - 密钥文件：`android/keystore/release.keystore`（**不提交 Git**，公开仓库严禁泄露！）
@@ -446,7 +474,7 @@ gh release create vXX android/app/build/outputs/apk/release/app-release.apk \
   --notes "发布说明"
 ```
 
-### 8.5 升级保留数据验证（每次发布前必做）
+### 9.5 升级保留数据验证（每次发布前必做）
 
 ```bash
 # 1. 手机已装旧版且有任务数据 → 覆盖安装新版
@@ -458,14 +486,14 @@ adb shell am start -n com.example.todolist/.MainActivity
 
 ---
 
-## 九、参考文档
+## 十、参考文档
 
-### 9.1 项目内文档
+### 10.1 项目内文档
 
 - `CLAUDE.md`: Claude 技术规范（设计规范、TDD 流程、调试规范）
 - `DEVELOPMENT.md`: 开发阶段指南
 
-### 9.2 外部参考
+### 10.2 外部参考
 
 - [Capacitor 文档](https://capacitorjs.com/docs)
 - [Android App Widgets](https://developer.android.com/develop/ui/views/appwidgets)
@@ -475,7 +503,7 @@ adb shell am start -n com.example.todolist/.MainActivity
 
 ---
 
-## 十、联系方式
+## 十一、联系方式
 
 - **GitHub**: yugusu704-lang
 - **项目仓库**: https://github.com/yugusu704-lang/to-do-list
