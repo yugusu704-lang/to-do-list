@@ -2,6 +2,14 @@ import { renderHook, act, waitFor } from '@testing-library/react';
 import { describe, test, expect, beforeEach } from 'vitest';
 import useTodos from '../useTodos';
 
+// 本地今天日期键 YYYY-MM-DD（与 rolloverOverdue 同源逻辑，避免依赖系统时区差异）
+function todayKey() {
+  const now = new Date();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${m}-${d}`;
+}
+
 describe('useTodos', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -220,5 +228,133 @@ describe('useTodos', () => {
     });
 
     expect(result.current.todos).toHaveLength(2);
+  });
+
+  // ---------- 自动顺延（rollover） ----------
+
+  // 构造最小种子任务对象
+  function seedTodo(overrides = {}) {
+    return {
+      id: 'seed-1',
+      text: '种子任务',
+      completed: false,
+      completedAt: null,
+      category: null,
+      createdAt: Date.now(),
+      dueAt: null,
+      location: null,
+      ...overrides,
+    };
+  }
+
+  test('加载时顺延过期未完成的任务到今天，其余不动', async () => {
+    localStorage.setItem('todos', JSON.stringify([
+      seedTodo({ id: 'overdue', text: '过期任务', dueAt: '2020-08-06T09:00' }),
+      seedTodo({ id: 'today', text: '今日任务', dueAt: `${todayKey()}T12:00` }),
+      seedTodo({ id: 'done', text: '已完成过期', completed: true, completedAt: Date.now(), dueAt: '2020-08-06T09:00' }),
+      seedTodo({ id: 'noDate', text: '无日期', dueAt: null }),
+    ]));
+
+    const { result } = renderHook(() => useTodos());
+    await result.current.loadedPromise;
+    await waitFor(() => expect(result.current.todos).toHaveLength(4));
+
+    // 过期未完成 → 日期变今天、时间保留
+    const overdue = result.current.todos.find((t) => t.id === 'overdue');
+    expect(overdue.dueAt).toBe(`${todayKey()}T09:00`);
+
+    // 其余任务 unchanged（值未变）
+    const today = result.current.todos.find((t) => t.id === 'today');
+    const done = result.current.todos.find((t) => t.id === 'done');
+    const noDate = result.current.todos.find((t) => t.id === 'noDate');
+    expect(today.dueAt).toBe(`${todayKey()}T12:00`);
+    expect(done.dueAt).toBe('2020-08-06T09:00'); // 已完成不顺延
+    expect(noDate.dueAt).toBeNull();
+
+    // 顺延计数 1（toast 依据）
+    expect(result.current.lastRolloverCount).toBe(1);
+  });
+
+  test('无过期任务时 lastRolloverCount 为 0', async () => {
+    localStorage.setItem('todos', JSON.stringify([
+      seedTodo({ id: 'today', dueAt: `${todayKey()}T12:00` }),
+      seedTodo({ id: 'noDate', dueAt: null }),
+    ]));
+
+    const { result } = renderHook(() => useTodos());
+    await result.current.loadedPromise;
+    await waitFor(() => expect(result.current.todos).toHaveLength(2));
+
+    expect(result.current.lastRolloverCount).toBe(0);
+  });
+
+  test('幂等：再次 rolloverOverdueTodos 返回 0 且状态不变', async () => {
+    localStorage.setItem('todos', JSON.stringify([
+      seedTodo({ id: 'overdue', dueAt: '2020-08-06T09:00' }),
+    ]));
+
+    const { result } = renderHook(() => useTodos());
+    await result.current.loadedPromise;
+    await waitFor(() => expect(result.current.todos).toHaveLength(1));
+    expect(result.current.lastRolloverCount).toBe(1);
+
+    let count;
+    act(() => {
+      count = result.current.rolloverOverdueTodos();
+    });
+    expect(count).toBe(0);
+    expect(result.current.todos[0].dueAt).toBe(`${todayKey()}T09:00`);
+  });
+
+  test('手动触发顺延并同步写入 localStorage', async () => {
+    const { result } = renderHook(() => useTodos());
+    await result.current.loadedPromise;
+
+    act(() => {
+      result.current.addTodo({ text: '手动顺延', dueAt: '2020-08-06T15:30' });
+    });
+
+    let count;
+    act(() => {
+      count = result.current.rolloverOverdueTodos();
+    });
+    expect(count).toBe(1);
+    expect(result.current.todos[0].dueAt).toBe(`${todayKey()}T15:30`);
+
+    // 等待异步保存完成，localStorage 也应同步更新
+    await new Promise((r) => setTimeout(r, 50));
+    const stored = JSON.parse(localStorage.getItem('todos'));
+    expect(stored[0].dueAt).toBe(`${todayKey()}T15:30`);
+  });
+
+  test('resyncFromNative 时顺延过期任务并更新计数', async () => {
+    // 先正常加载（无种子），再写入过期种子后 resync 模拟原生端数据变化
+    const { result } = renderHook(() => useTodos());
+    await result.current.loadedPromise;
+
+    localStorage.setItem('todos', JSON.stringify([
+      seedTodo({ id: 'overdue', dueAt: '2020-08-06T09:00' }),
+    ]));
+
+    await act(async () => {
+      await result.current.resyncFromNative();
+    });
+
+    expect(result.current.todos).toHaveLength(1);
+    expect(result.current.todos[0].dueAt).toBe(`${todayKey()}T09:00`);
+    expect(result.current.lastRolloverCount).toBe(1);
+  });
+
+  test('已完成过期任务 seed 不顺延，计数为 0', async () => {
+    localStorage.setItem('todos', JSON.stringify([
+      seedTodo({ id: 'done', completed: true, completedAt: Date.now(), dueAt: '2020-08-06T09:00' }),
+    ]));
+
+    const { result } = renderHook(() => useTodos());
+    await result.current.loadedPromise;
+    await waitFor(() => expect(result.current.todos).toHaveLength(1));
+
+    expect(result.current.todos[0].dueAt).toBe('2020-08-06T09:00');
+    expect(result.current.lastRolloverCount).toBe(0);
   });
 });

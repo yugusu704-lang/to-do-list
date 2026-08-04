@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import TodoStorage from '../plugins/todoStorage';
+import { rolloverOverdue } from '../utils/rolloverOverdue';
 
 const STORAGE_KEY = 'todos';
 const AUTO_CLEAN_DAYS = 30;
@@ -74,7 +75,11 @@ function autoClean(todos) {
 // Todo 数据管理 Hook
 export default function useTodos() {
   const [todos, setTodos] = useState([]);
+  const [lastRolloverCount, setLastRolloverCount] = useState(0);
   const loadedRef = useRef(false);
+  // 每次 render 镜像 todos，供空依赖回调读取最新值
+  const todosRef = useRef([]);
+  todosRef.current = todos;
 
   // 用于测试：等待初始加载完成的 Promise
   const loadedResolveRef = useRef(null);
@@ -82,10 +87,13 @@ export default function useTodos() {
     loadedResolveRef.current = resolve;
   }));
 
-  // 启动时异步加载（含迁移逻辑）
+  // 启动时异步加载（含迁移、清理、顺延过期任务）
   useEffect(() => {
     loadTodosAsync().then(({ todos: data }) => {
-      setTodos(autoClean(data));
+      const cleaned = autoClean(data);
+      const { todos: rolled, rolledCount } = rolloverOverdue(cleaned);
+      setTodos(rolled);
+      setLastRolloverCount(rolledCount);
       loadedRef.current = true;
       loadedResolveRef.current?.();
     });
@@ -148,11 +156,24 @@ export default function useTodos() {
     setTodos((prev) => [...restored, ...prev]);
   }, []);
 
-  // 从原生端重新同步（app 回到前台时调用）
-  const resyncFromNative = useCallback(async () => {
-    const { todos: fresh } = await loadTodosAsync();
-    setTodos(autoClean(fresh));
+  // 手动触发顺延（App 0 点定时器调用），返回顺延数量
+  const rolloverOverdueTodos = useCallback(() => {
+    const { todos: rolled, rolledCount } = rolloverOverdue(todosRef.current);
+    if (rolledCount > 0) {
+      setTodos(rolled);
+      setLastRolloverCount(rolledCount);
+    }
+    return rolledCount;
   }, []);
 
-  return { todos, loadedPromise: loadedPromiseRef.current, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative };
+  // 从原生端重新同步（app 回到前台时调用）；顺延基于 fresh 数据避免竞态
+  const resyncFromNative = useCallback(async () => {
+    const { todos: fresh } = await loadTodosAsync();
+    const cleaned = autoClean(fresh);
+    const { todos: rolled, rolledCount } = rolloverOverdue(cleaned);
+    setTodos(rolled);
+    setLastRolloverCount(rolledCount);
+  }, []);
+
+  return { todos, loadedPromise: loadedPromiseRef.current, lastRolloverCount, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative, rolloverOverdueTodos };
 }

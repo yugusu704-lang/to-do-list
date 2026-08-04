@@ -15,7 +15,7 @@ function msUntilMidnight() {
 
 // 根组件
 export default function App() {
-  const { todos, loaded, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative } = useTodos();
+  const { todos, lastRolloverCount, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative, rolloverOverdueTodos } = useTodos();
   const [filter, setFilter] = useState('all');
   const [dayKey, setDayKey] = useState(() => new Date().toDateString());
   const [toast, setToast] = useState(null);
@@ -34,13 +34,14 @@ export default function App() {
     }
   }, []);
 
-  // 跨天自动刷新分组标签
+  // 跨天自动刷新分组标签 + 顺延过期任务（0 点立即顺延）
   useEffect(() => {
     const timer = setTimeout(() => {
       setDayKey(new Date().toDateString());
+      rolloverOverdueTodos();
     }, msUntilMidnight());
     return () => clearTimeout(timer);
-  }, [dayKey]);
+  }, [dayKey, rolloverOverdueTodos]);
 
   // app 从后台回到前台时，从 SharedPreferences 重新同步数据 + 检查 focus_add
   useEffect(() => {
@@ -68,16 +69,27 @@ export default function App() {
     setToast({
       message: `已清除 ${removed.length} 条任务`,
       removed,
+      undoable: true,
     });
   };
 
-  // 撤销
+  // 撤销（仅清除类的 toast 可撤销）
   const handleUndo = () => {
-    if (!toast) return;
+    if (!toast?.undoable) return;
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
     restoreTodos(toast.removed);
     setToast(null);
   };
+
+  // 顺延通知 toast（无撤销按钮，3 秒自动消失）
+  useEffect(() => {
+    if (lastRolloverCount > 0) {
+      setToast({
+        message: `${lastRolloverCount} 个任务已顺延到今天`,
+        undoable: false,
+      });
+    }
+  }, [lastRolloverCount]);
 
   // toast 3 秒后自动消失
   useEffect(() => {
@@ -135,13 +147,15 @@ export default function App() {
         >
           <div className="flex items-center gap-3 rounded-xl bg-[#2F3437] px-4 py-3 text-sm text-white shadow-lg">
             <span>{toast.message}</span>
-            <button
-              type="button"
-              onClick={handleUndo}
-              className="font-semibold text-blue-400 transition-colors hover:text-blue-300"
-            >
-              撤销
-            </button>
+            {toast.undoable && (
+              <button
+                type="button"
+                onClick={handleUndo}
+                className="font-semibold text-blue-400 transition-colors hover:text-blue-300"
+              >
+                撤销
+              </button>
+            )}
           </div>
         </div>
       )}
