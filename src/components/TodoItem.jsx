@@ -132,7 +132,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
   // 常规浏览视图（垂直居中对齐、左右均衡舒展）
   return (
     <div
-      className={`group relative flex items-center gap-4 overflow-hidden rounded-xl bg-card px-5 py-3.5 shadow-[var(--shadow-card)] transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.99] ${
+      className={`group relative flex items-center gap-3 sm:gap-4 overflow-hidden rounded-xl bg-card px-4 sm:px-5 py-3.5 shadow-[var(--shadow-card)] transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.99] ${
         todo.completed ? 'opacity-60' : ''
       }`}
     >
@@ -189,7 +189,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
               <span className="text-[10px] text-[#D6D3D1]">•</span>
             )}
             {todo.location && (
-              <span className="inline-flex items-center gap-1 truncate max-w-[200px]">
+              <span className="inline-flex items-center gap-1 truncate max-w-[140px] sm:max-w-[220px]">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />

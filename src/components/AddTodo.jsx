@@ -24,7 +24,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
   };
 
   return (
-    <div className="border-t border-border-light px-5 py-4 pb-[max(16px,env(safe-area-inset-bottom))]">
+    <div className="border-t border-border/80 bg-card/40 backdrop-blur-md px-4 sm:px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
       <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
         {/* 任务内容输入 */}
         <input

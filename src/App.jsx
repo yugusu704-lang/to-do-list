@@ -104,49 +104,68 @@ export default function App() {
   }, [toast]);
 
   return (
-    <div className="flex h-dvh flex-col overflow-hidden bg-bg">
-      {/* 标题区 */}
-      <header className="px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-[26px] font-bold tracking-tight text-text">待办清单</h1>
-            <p className="mt-0.5 text-[13px] tracking-wide text-text-secondary">
-              {activeCount} 个未完成
-            </p>
+    <div className="flex h-dvh w-full flex-col overflow-hidden bg-bg">
+      {/* 响应式居中容器：常规手机满宽，折叠屏/大屏/平板自动限制黄金宽度居中 */}
+      <div className="mx-auto flex h-full w-full max-w-lg md:max-w-xl flex-col overflow-hidden">
+        {/* 标题区（双行呼吸感排版：大标题 + 状态轻胶囊 + 右侧对称操作区） */}
+        <header className="flex flex-col gap-2.5 px-4 sm:px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-3">
+          {/* 第一行：大标题 + 右侧操作组 */}
+          <div className="flex items-center justify-between gap-2">
+            <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-text leading-tight">
+              待办清单
+            </h1>
+
+            <div className="flex flex-shrink-0 items-center gap-2">
+              {completedCount > 0 && (
+                <button
+                  type="button"
+                  onClick={handleClearCompleted}
+                  aria-label={`清除已完成的 ${completedCount} 项任务`}
+                  className="inline-flex h-[38px] items-center gap-1.5 rounded-xl border border-border/80 bg-card px-2.5 sm:px-3 text-xs font-medium text-text-secondary shadow-sm transition-all duration-150 hover:border-danger/40 hover:bg-danger/5 hover:text-danger active:scale-95"
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70 flex-shrink-0">
+                    <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  <span className="whitespace-nowrap">清除 ({completedCount})</span>
+                </button>
+              )}
+              <ThemeToggle themeMode={themeMode} onCycle={cycleTheme} />
+            </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {completedCount > 0 && (
-              <button
-                type="button"
-                onClick={handleClearCompleted}
-                className="text-xs text-text-muted transition-colors hover:text-danger active:scale-[0.97]"
-              >
-                清除已完成 ({completedCount})
-              </button>
-            )}
-            <ThemeToggle themeMode={themeMode} onCycle={cycleTheme} />
+          {/* 第二行：未完成状态轻胶囊徽标 */}
+          <div className="flex items-center">
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card px-3 py-1 text-xs text-text-secondary shadow-xs">
+              <span
+                className={`h-2 w-2 rounded-full ${
+                  activeCount > 0 ? 'bg-primary' : 'bg-done'
+                }`}
+              />
+              <span className="font-medium tracking-wide">
+                {activeCount > 0 ? `${activeCount} 项未完成` : '所有任务已完成 🎉'}
+              </span>
+            </div>
           </div>
+        </header>
+
+        {/* 筛选栏 */}
+        <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
+
+        {/* 任务列表（独立滚动区，底部导航栏固定不动） */}
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <TodoList
+            key={dayKey}
+            todos={todos}
+            filter={filter}
+            onToggle={toggleTodo}
+            onDelete={deleteTodo}
+            onUpdate={updateTodo}
+          />
         </div>
-      </header>
 
-      {/* 筛选栏 */}
-      <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
-
-      {/* 任务列表（独立滚动区，底部导航栏固定不动） */}
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <TodoList
-          key={dayKey}
-          todos={todos}
-          filter={filter}
-          onToggle={toggleTodo}
-          onDelete={deleteTodo}
-          onUpdate={updateTodo}
-        />
+        {/* 底部输入栏 */}
+        <AddTodo ref={inputRef} onAdd={addTodo} />
       </div>
-
-      {/* 底部输入栏 */}
-      <AddTodo ref={inputRef} onAdd={addTodo} />
 
       {/* 撤销 toast */}
       {toast && (

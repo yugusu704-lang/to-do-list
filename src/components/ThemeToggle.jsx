@@ -1,7 +1,7 @@
 // 浅色模式 Sun 图标
 function SunIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="5" />
       <line x1="12" y1="1" x2="12" y2="3" />
       <line x1="12" y1="21" x2="12" y2="23" />
@@ -18,7 +18,7 @@ function SunIcon() {
 // 深色模式 Moon 图标
 function MoonIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
     </svg>
   );
@@ -27,7 +27,7 @@ function MoonIcon() {
 // 跟随系统 System 图标（半明半暗圆圈）
 function SystemIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" />
     </svg>
@@ -49,7 +49,7 @@ export default function ThemeToggle({ themeMode, onCycle }) {
       onClick={onCycle}
       aria-label={`当前主题：${label}，点击切换`}
       title={`当前主题：${label}（点击切换）`}
-      className="flex h-9 w-9 items-center justify-center rounded-xl text-text-secondary transition-all duration-150 hover:bg-black/5 hover:text-text dark:hover:bg-white/10 active:scale-90"
+      className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-border/80 bg-card text-text-secondary shadow-sm transition-all duration-150 hover:border-text-muted hover:text-text active:scale-90"
     >
       {themeMode === 'light' && <SunIcon />}
       {themeMode === 'dark' && <MoonIcon />}
