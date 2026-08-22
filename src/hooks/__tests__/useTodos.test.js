@@ -27,6 +27,10 @@ describe('useTodos', () => {
     expect(result.current.todos[0].completed).toBe(false);
     expect(result.current.todos[0].dueAt).toBeNull();
     expect(result.current.todos[0].location).toBeNull();
+    expect(result.current.todos[0].priority).toBe(0);
+    expect(result.current.todos[0].notes).toBeNull();
+    expect(result.current.todos[0].deletedAt).toBeNull();
+    expect(typeof result.current.todos[0].updatedAt).toBe('number');
   });
 
   test('添加任务带时间和地点', () => {
@@ -88,6 +92,29 @@ describe('useTodos', () => {
 
     expect(result.current.todos).toHaveLength(1);
     expect(result.current.todos[0].text).toBe('买牛奶');
+  });
+
+  test('修改任务内容、时间与地点', () => {
+    const { result } = renderHook(() => useTodos());
+
+    act(() => {
+      result.current.addTodo({ text: '买牛奶' });
+    });
+
+    const todoId = result.current.todos[0].id;
+
+    act(() => {
+      result.current.updateTodo({
+        id: todoId,
+        text: '买新鲜牛奶',
+        dueAt: '2026-08-25T10:30',
+        location: '永辉超市',
+      });
+    });
+
+    expect(result.current.todos[0].text).toBe('买新鲜牛奶');
+    expect(result.current.todos[0].dueAt).toBe('2026-08-25T10:30');
+    expect(result.current.todos[0].location).toBe('永辉超市');
   });
 
   test('数据写入 localStorage', async () => {

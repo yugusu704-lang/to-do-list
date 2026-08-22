@@ -72,7 +72,7 @@ function groupByDueDate(todos) {
 }
 
 // 任务列表组件（含日期分组）
-export default function TodoList({ todos, filter, onToggle, onDelete }) {
+export default function TodoList({ todos, filter, onToggle, onDelete, onUpdate }) {
   const filtered =
     filter === 'active'
       ? todos.filter((t) => !t.completed)
@@ -100,6 +100,7 @@ export default function TodoList({ todos, filter, onToggle, onDelete }) {
                 todo={todo}
                 onToggle={onToggle}
                 onDelete={onDelete}
+                onUpdate={onUpdate}
               />
             ))}
           </div>

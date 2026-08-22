@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import useTodos from './hooks/useTodos';
+import useTheme from './hooks/useTheme';
 import TodoStorage from './plugins/todoStorage';
 import FilterTabs from './components/FilterTabs';
 import TodoList from './components/TodoList';
 import AddTodo from './components/AddTodo';
+import ThemeToggle from './components/ThemeToggle';
 
 // 计算距离下一个 0 点的毫秒数
 function msUntilMidnight() {
@@ -15,7 +17,8 @@ function msUntilMidnight() {
 
 // 根组件
 export default function App() {
-  const { todos, lastRolloverCount, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative, rolloverOverdueTodos } = useTodos();
+  const { todos, lastRolloverCount, addTodo, updateTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative, rolloverOverdueTodos } = useTodos();
+  const { themeMode, cycleTheme } = useTheme();
   const [filter, setFilter] = useState('all');
   const [dayKey, setDayKey] = useState(() => new Date().toDateString());
   const [toast, setToast] = useState(null);
@@ -104,21 +107,27 @@ export default function App() {
     <div className="flex h-dvh flex-col overflow-hidden bg-bg">
       {/* 标题区 */}
       <header className="px-5 pt-[max(2rem,env(safe-area-inset-top))] pb-3">
-        <div className="flex items-baseline justify-between">
-          <h1 className="text-[26px] font-bold tracking-tight text-text">待办清单</h1>
-          {completedCount > 0 && (
-            <button
-              type="button"
-              onClick={handleClearCompleted}
-              className="text-xs text-text-muted transition-colors hover:text-danger active:scale-[0.97]"
-            >
-              清除已完成 ({completedCount})
-            </button>
-          )}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-[26px] font-bold tracking-tight text-text">待办清单</h1>
+            <p className="mt-0.5 text-[13px] tracking-wide text-text-secondary">
+              {activeCount} 个未完成
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            {completedCount > 0 && (
+              <button
+                type="button"
+                onClick={handleClearCompleted}
+                className="text-xs text-text-muted transition-colors hover:text-danger active:scale-[0.97]"
+              >
+                清除已完成 ({completedCount})
+              </button>
+            )}
+            <ThemeToggle themeMode={themeMode} onCycle={cycleTheme} />
+          </div>
         </div>
-        <p className="mt-1 text-[13px] tracking-wide text-text-secondary">
-          {activeCount} 个未完成
-        </p>
       </header>
 
       {/* 筛选栏 */}
@@ -132,6 +141,7 @@ export default function App() {
           filter={filter}
           onToggle={toggleTodo}
           onDelete={deleteTodo}
+          onUpdate={updateTodo}
         />
       </div>
 

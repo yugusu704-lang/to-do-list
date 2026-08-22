@@ -1,0 +1,363 @@
+package com.example.todolist.db;
+
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.List;
+import java.util.Locale;
+
+public class TodoDbHelper extends SQLiteOpenHelper {
+
+    private static final String TAG = "TodoDbHelper";
+    private static final String DATABASE_NAME = "todos.db";
+    private static final int DATABASE_VERSION = 1;
+
+    public static final String TABLE_TODOS = "todos";
+    public static final String COL_ID = "id";
+    public static final String COL_TEXT = "text";
+    public static final String COL_COMPLETED = "completed";
+    public static final String COL_COMPLETED_AT = "completed_at";
+    public static final String COL_CREATED_AT = "created_at";
+    public static final String COL_UPDATED_AT = "updated_at";
+    public static final String COL_DUE_AT = "due_at";
+    public static final String COL_LOCATION = "location";
+    public static final String COL_CATEGORY = "category";
+    public static final String COL_PRIORITY = "priority";
+    public static final String COL_NOTES = "notes";
+    public static final String COL_DELETED_AT = "deleted_at";
+
+    private static final String OLD_PREFS_NAME = "todo_prefs";
+    private static final String OLD_KEY_TODOS = "todos_json";
+    private static final String KEY_MIGRATED_TO_SQLITE = "migrated_to_sqlite_v1";
+
+    private static TodoDbHelper instance;
+
+    public static synchronized TodoDbHelper getInstance(Context context) {
+        if (instance == null) {
+            instance = new TodoDbHelper(context.getApplicationContext());
+        }
+        return instance;
+    }
+
+    private TodoDbHelper(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        String createTableSql = "CREATE TABLE IF NOT EXISTS " + TABLE_TODOS + " ("
+                + COL_ID + " TEXT PRIMARY KEY, "
+                + COL_TEXT + " TEXT NOT NULL, "
+                + COL_COMPLETED + " INTEGER NOT NULL DEFAULT 0, "
+                + COL_COMPLETED_AT + " INTEGER, "
+                + COL_CREATED_AT + " INTEGER NOT NULL, "
+                + COL_UPDATED_AT + " INTEGER NOT NULL, "
+                + COL_DUE_AT + " TEXT, "
+                + COL_LOCATION + " TEXT, "
+                + COL_CATEGORY + " TEXT, "
+                + COL_PRIORITY + " INTEGER NOT NULL DEFAULT 0, "
+                + COL_NOTES + " TEXT, "
+                + COL_DELETED_AT + " INTEGER"
+                + ");";
+        db.execSQL(createTableSql);
+
+        // 创建复合索引，加速查询
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_active_due ON " + TABLE_TODOS
+                + " (" + COL_COMPLETED + ", " + COL_DUE_AT + ", " + COL_DELETED_AT + ");");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_created ON " + TABLE_TODOS
+                + " (" + COL_CREATED_AT + " DESC);");
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        // 未来升级扩展
+    }
+
+    /**
+     * 自动从 SharedPreferences 迁移存量历史数据
+     */
+    public synchronized void checkAndMigrateFromSharedPrefs(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(OLD_PREFS_NAME, Context.MODE_PRIVATE);
+        boolean alreadyMigrated = prefs.getBoolean(KEY_MIGRATED_TO_SQLITE, false);
+        if (alreadyMigrated) {
+            return;
+        }
+
+        String json = prefs.getString(OLD_KEY_TODOS, null);
+        if (json == null || json.trim().isEmpty() || "[]".equals(json.trim())) {
+            prefs.edit().putBoolean(KEY_MIGRATED_TO_SQLITE, true).apply();
+            return;
+        }
+
+        try {
+            JSONArray arr = new JSONArray(json);
+            if (arr.length() > 0) {
+                SQLiteDatabase db = getWritableDatabase();
+                // 检查数据库当前是否已经有数据
+                Cursor cursor = db.rawQuery("SELECT COUNT(*) FROM " + TABLE_TODOS, null);
+                int count = 0;
+                if (cursor.moveToFirst()) {
+                    count = cursor.getInt(0);
+                }
+                cursor.close();
+
+                if (count == 0) {
+                    insertOrUpdateTodos(arr);
+                    Log.i(TAG, "Successfully migrated " + arr.length() + " todos from SharedPreferences to SQLite.");
+                }
+            }
+            prefs.edit().putBoolean(KEY_MIGRATED_TO_SQLITE, true).apply();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to migrate todos from SharedPreferences to SQLite", e);
+        }
+    }
+
+    /**
+     * 获取所有有效（未软删除）的任务 JSON 数组
+     */
+    public synchronized JSONArray getAllActiveTodosJson() {
+        JSONArray result = new JSONArray();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            cursor = db.query(TABLE_TODOS, null,
+                    COL_DELETED_AT + " IS NULL",
+                    null, null, null,
+                    COL_CREATED_AT + " DESC");
+
+            while (cursor.moveToNext()) {
+                JSONObject obj = new JSONObject();
+                obj.put("id", cursor.getString(cursor.getColumnIndexOrThrow(COL_ID)));
+                obj.put("text", cursor.getString(cursor.getColumnIndexOrThrow(COL_TEXT)));
+                obj.put("completed", cursor.getInt(cursor.getColumnIndexOrThrow(COL_COMPLETED)) == 1);
+
+                long completedAt = cursor.getLong(cursor.getColumnIndexOrThrow(COL_COMPLETED_AT));
+                obj.put("completedAt", completedAt > 0 ? completedAt : JSONObject.NULL);
+
+                obj.put("createdAt", cursor.getLong(cursor.getColumnIndexOrThrow(COL_CREATED_AT)));
+
+                long updatedAt = cursor.getLong(cursor.getColumnIndexOrThrow(COL_UPDATED_AT));
+                obj.put("updatedAt", updatedAt > 0 ? updatedAt : JSONObject.NULL);
+
+                String dueAt = cursor.getString(cursor.getColumnIndexOrThrow(COL_DUE_AT));
+                obj.put("dueAt", dueAt != null && !dueAt.isEmpty() ? dueAt : JSONObject.NULL);
+
+                String location = cursor.getString(cursor.getColumnIndexOrThrow(COL_LOCATION));
+                obj.put("location", location != null && !location.isEmpty() ? location : JSONObject.NULL);
+
+                String category = cursor.getString(cursor.getColumnIndexOrThrow(COL_CATEGORY));
+                obj.put("category", category != null && !category.isEmpty() ? category : JSONObject.NULL);
+
+                obj.put("priority", cursor.getInt(cursor.getColumnIndexOrThrow(COL_PRIORITY)));
+
+                String notes = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTES));
+                obj.put("notes", notes != null && !notes.isEmpty() ? notes : JSONObject.NULL);
+
+                result.put(obj);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getAllActiveTodosJson failed", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 事务批量全量/增量保存任务
+     */
+    public synchronized void insertOrUpdateTodos(JSONArray todos) {
+        if (todos == null) return;
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            long now = System.currentTimeMillis();
+            for (int i = 0; i < todos.length(); i++) {
+                JSONObject obj = todos.getJSONObject(i);
+                ContentValues cv = new ContentValues();
+
+                String id = obj.getString("id");
+                cv.put(COL_ID, id);
+                cv.put(COL_TEXT, obj.getString("text"));
+                cv.put(COL_COMPLETED, obj.optBoolean("completed", false) ? 1 : 0);
+
+                if (obj.has("completedAt") && !obj.isNull("completedAt")) {
+                    cv.put(COL_COMPLETED_AT, obj.getLong("completedAt"));
+                } else {
+                    cv.putNull(COL_COMPLETED_AT);
+                }
+
+                long createdAt = obj.optLong("createdAt", now);
+                cv.put(COL_CREATED_AT, createdAt);
+
+                long updatedAt = obj.optLong("updatedAt", now);
+                cv.put(COL_UPDATED_AT, updatedAt);
+
+                if (obj.has("dueAt") && !obj.isNull("dueAt")) {
+                    cv.put(COL_DUE_AT, obj.getString("dueAt"));
+                } else {
+                    cv.putNull(COL_DUE_AT);
+                }
+
+                if (obj.has("location") && !obj.isNull("location")) {
+                    cv.put(COL_LOCATION, obj.getString("location"));
+                } else {
+                    cv.putNull(COL_LOCATION);
+                }
+
+                if (obj.has("category") && !obj.isNull("category")) {
+                    cv.put(COL_CATEGORY, obj.getString("category"));
+                } else {
+                    cv.putNull(COL_CATEGORY);
+                }
+
+                cv.put(COL_PRIORITY, obj.optInt("priority", 0));
+
+                if (obj.has("notes") && !obj.isNull("notes")) {
+                    cv.put(COL_NOTES, obj.getString("notes"));
+                } else {
+                    cv.putNull(COL_NOTES);
+                }
+
+                if (obj.has("deletedAt") && !obj.isNull("deletedAt")) {
+                    cv.put(COL_DELETED_AT, obj.getLong("deletedAt"));
+                } else {
+                    cv.putNull(COL_DELETED_AT);
+                }
+
+                db.insertWithOnConflict(TABLE_TODOS, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+            db.setTransactionSuccessful();
+        } catch (Exception e) {
+            Log.e(TAG, "insertOrUpdateTodos transaction failed", e);
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * 单条任务完成状态切换
+     */
+    public synchronized void setTodoCompleted(String id, boolean completed, long completedAt) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COL_COMPLETED, completed ? 1 : 0);
+        if (completed) {
+            cv.put(COL_COMPLETED_AT, completedAt);
+        } else {
+            cv.putNull(COL_COMPLETED_AT);
+        }
+        cv.put(COL_UPDATED_AT, System.currentTimeMillis());
+        db.update(TABLE_TODOS, cv, COL_ID + " = ?", new String[]{id});
+    }
+
+    /**
+     * 单条任务软删除
+     */
+    public synchronized void softDeleteTodo(String id, long deletedAt) {
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COL_DELETED_AT, deletedAt);
+        cv.put(COL_UPDATED_AT, System.currentTimeMillis());
+        db.update(TABLE_TODOS, cv, COL_ID + " = ?", new String[]{id});
+    }
+
+    /**
+     * 供小组件使用的今日待办任务数据结构
+     */
+    public static class WidgetTodoItem {
+        public String id;
+        public String text;
+        public long dueAt;
+        public String location;
+    }
+
+    /**
+     * 小组件直接查询：今天未完成的任务，按时间升序
+     */
+    public synchronized List<WidgetTodoItem> getTodayActiveTodosForWidget(long todayStart, long todayEnd, java.util.Set<String> completingIds) {
+        List<WidgetTodoItem> result = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            // 查询未删除且未完成的任务（或正在播放完成动效的任务）
+            String selection = COL_DELETED_AT + " IS NULL AND " + COL_DUE_AT + " IS NOT NULL AND " + COL_DUE_AT + " != ''";
+            cursor = db.query(TABLE_TODOS, null, selection, null, null, null, null);
+
+            while (cursor.moveToNext()) {
+                String id = cursor.getString(cursor.getColumnIndexOrThrow(COL_ID));
+                boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(COL_COMPLETED)) == 1;
+
+                // 已完成任务仅在动效期间显示
+                if (completed && (completingIds == null || !completingIds.contains(id))) {
+                    continue;
+                }
+
+                String dueAtStr = cursor.getString(cursor.getColumnIndexOrThrow(COL_DUE_AT));
+                long dueAt = parseDueAtStr(dueAtStr);
+                if (dueAt == 0) continue;
+
+                // 范围检查：是否在今日 0:00 ~ 24:00
+                if (dueAt < todayStart || dueAt >= todayEnd) continue;
+
+                WidgetTodoItem item = new WidgetTodoItem();
+                item.id = id;
+                item.text = cursor.getString(cursor.getColumnIndexOrThrow(COL_TEXT));
+                item.dueAt = dueAt;
+                item.location = cursor.getString(cursor.getColumnIndexOrThrow(COL_LOCATION));
+                result.add(item);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getTodayActiveTodosForWidget failed", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        // 按时间升序排序
+        Collections.sort(result, new Comparator<WidgetTodoItem>() {
+            @Override
+            public int compare(WidgetTodoItem a, WidgetTodoItem b) {
+                return Long.compare(a.dueAt, b.dueAt);
+            }
+        });
+
+        return result;
+    }
+
+    private static long parseDueAtStr(String str) {
+        if (str == null || str.isEmpty() || "null".equals(str)) return 0;
+        try {
+            SimpleDateFormat sdf;
+            if (str.split(":").length == 2) {
+                sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault());
+            } else {
+                sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
+            }
+            Date date = sdf.parse(str);
+            if (date != null) return date.getTime();
+        } catch (Exception ignored) {
+        }
+        try {
+            return Long.parseLong(str);
+        } catch (Exception ignored) {
+        }
+        return 0;
+    }
+}

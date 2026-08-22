@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-@theme {
+:root {
   --color-bg: #F5F0EB;
   --color-card: #FFFFFF;
   --color-text: #2F3437;
@@ -11,8 +11,44 @@
   --color-danger: #DC2626;
   --color-border: #E8E5E3;
   --color-border-light: #F5F5F4;
+  --color-btn-main: #2F3437;
+  --color-btn-main-hover: #1a1d1f;
   --shadow-card: 0 1px 2px rgba(0,0,0,0.04);
   --shadow-card-hover: 0 2px 8px rgba(0,0,0,0.06);
+}
+
+.dark {
+  --color-bg: #121214;
+  --color-card: #1C1C1F;
+  --color-text: #F4F4F5;
+  --color-text-secondary: #A1A1AA;
+  --color-text-muted: #71717A;
+  --color-primary: #3B82F6;
+  --color-done: #22C55E;
+  --color-danger: #EF4444;
+  --color-border: #2D2D32;
+  --color-border-light: #222226;
+  --color-btn-main: #27272A;
+  --color-btn-main-hover: #3F3F46;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
+  --shadow-card-hover: 0 3px 10px rgba(0,0,0,0.4);
+}
+
+@theme {
+  --color-bg: var(--color-bg);
+  --color-card: var(--color-card);
+  --color-text: var(--color-text);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-muted: var(--color-text-muted);
+  --color-primary: var(--color-primary);
+  --color-done: var(--color-done);
+  --color-danger: var(--color-danger);
+  --color-border: var(--color-border);
+  --color-border-light: var(--color-border-light);
+  --color-btn-main: var(--color-btn-main);
+  --color-btn-main-hover: var(--color-btn-main-hover);
+  --shadow-card: var(--shadow-card);
+  --shadow-card-hover: var(--shadow-card-hover);
 }
 
 body {
@@ -39,6 +75,10 @@ body {
   transform: scale(0);
   animation: ripple-expand 0.5s ease-out forwards;
   pointer-events: none;
+}
+
+.dark .ripple-effect {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 @keyframes ripple-expand {

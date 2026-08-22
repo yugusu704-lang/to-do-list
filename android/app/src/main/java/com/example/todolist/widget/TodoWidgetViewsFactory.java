@@ -2,20 +2,15 @@ package com.example.todolist.widget;
 
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.graphics.Paint;
 import android.widget.RemoteViews;
 import android.widget.RemoteViewsService;
 
 import com.example.todolist.R;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
+import com.example.todolist.db.TodoDbHelper;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 import java.util.Locale;
@@ -28,10 +23,6 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
 
     private Context context;
     private List<TodoItem> todoItems = new ArrayList<>();
-
-    // 与 TodoWidgetProvider 保持一致的 SharedPreferences 配置
-    private static final String PREFS_NAME = "todo_prefs";
-    private static final String KEY_TODOS = "todos_json";
     private static final String EXTRA_TODO_ID = "todo_id";
 
     public TodoWidgetViewsFactory(Context context, Intent intent) {
@@ -98,24 +89,12 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         v.setViewVisibility(R.id.task_separator,
                 (hasTime && hasLocation) ? android.view.View.VISIBLE : android.view.View.GONE);
 
-        // 复选框：完成动效中的任务显示绿勾并按帧淡出，其余为空心圆
+        // 复选框与主题配色：根据 App 当前主题模式动态渲染
         Float alpha = TodoWidgetProvider.completingRows.get(item.id);
-        if (alpha != null) {
-            v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_checked);
-            v.setFloat(R.id.widget_task_item_root, "setAlpha", alpha);
-        } else {
-            v.setImageViewResource(R.id.task_checkbox, R.drawable.ic_checkbox_unchecked);
-            v.setFloat(R.id.widget_task_item_root, "setAlpha", 1f);
-        }
+        TodoWidgetTheme.applyThemeToTaskItem(context, v, alpha);
 
-        // 文字样式
+        // 文字抗锯齿
         v.setInt(R.id.task_text, "setPaintFlags", Paint.ANTI_ALIAS_FLAG);
-        v.setTextColor(R.id.task_text,
-                context.getResources().getColor(R.color.widget_text_primary, null));
-        v.setTextColor(R.id.task_time,
-                context.getResources().getColor(R.color.widget_text_secondary, null));
-        v.setTextColor(R.id.task_location,
-                context.getResources().getColor(R.color.widget_text_secondary, null));
 
         // 点击任务行/复选框 → 通过 fillInIntent 携带 todoId，触发模板的标记完成
         // 注意：checkbox ImageView 必须单独设置 fillInIntent，
@@ -151,79 +130,25 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         return true;
     }
 
-    // ---- 数据加载（复用 TodoWidgetProvider 的筛选逻辑） ----
+    // ---- 数据加载（使用 TodoDbHelper 原生 SQL 查询） ----
 
     private void loadTodayTodos() {
         todoItems.clear();
 
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String json = prefs.getString(KEY_TODOS, "[]");
-
         long todayStart = getTodayStartMillis();
         long todayEnd = todayStart + 86400000L;
 
-        try {
-            JSONArray arr = new JSONArray(json);
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject obj = arr.getJSONObject(i);
+        List<TodoDbHelper.WidgetTodoItem> dbItems = TodoDbHelper.getInstance(context)
+                .getTodayActiveTodosForWidget(todayStart, todayEnd, TodoWidgetProvider.completingRows.keySet());
 
-                // 未完成任务才显示；仅"完成动效"播放期间短暂保留刚完成的行
-                if (obj.optBoolean("completed", false)
-                        && !TodoWidgetProvider.completingRows.containsKey(obj.getString("id"))) continue;
-
-                // 解析 dueAt
-                long dueAt = parseDueAt(obj);
-                if (dueAt == 0) continue;
-
-                // 只显示今天的任务
-                if (dueAt < todayStart || dueAt >= todayEnd) continue;
-
-                TodoItem item = new TodoItem();
-                item.id = obj.getString("id");
-                item.text = obj.getString("text");
-                item.dueAt = dueAt;
-                item.location = obj.optString("location", null);
-                todoItems.add(item);
-            }
-        } catch (Exception ignored) {
+        for (TodoDbHelper.WidgetTodoItem item : dbItems) {
+            TodoItem ti = new TodoItem();
+            ti.id = item.id;
+            ti.text = item.text;
+            ti.dueAt = item.dueAt;
+            ti.location = item.location;
+            todoItems.add(ti);
         }
-
-        // 按时间升序排序
-        Collections.sort(todoItems, new Comparator<TodoItem>() {
-            @Override
-            public int compare(TodoItem a, TodoItem b) {
-                return Long.compare(a.dueAt, b.dueAt);
-            }
-        });
-    }
-
-    // 解析 dueAt 字段（支持 ISO 字符串和时间戳）
-    private static long parseDueAt(JSONObject obj) {
-        try {
-            if (!obj.has("dueAt") || obj.isNull("dueAt")) return 0;
-
-            Object dueAtObj = obj.get("dueAt");
-            if (dueAtObj instanceof Number) {
-                return ((Number) dueAtObj).longValue();
-            }
-            if (dueAtObj instanceof String) {
-                String str = (String) dueAtObj;
-                if (str.isEmpty() || "null".equals(str)) return 0;
-
-                SimpleDateFormat sdf;
-                if (str.split(":").length == 2) {
-                    sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault());
-                } else {
-                    sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
-                }
-                Date date = sdf.parse(str);
-                if (date != null) return date.getTime();
-
-                return Long.parseLong(str);
-            }
-        } catch (Exception ignored) {
-        }
-        return 0;
     }
 
     private static long getTodayStartMillis() {

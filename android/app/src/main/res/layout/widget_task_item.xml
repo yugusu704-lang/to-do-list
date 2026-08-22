@@ -32,13 +32,13 @@
         android:orientation="vertical"
         android:layout_marginStart="6dp">
 
-        <!-- 任务文字 -->
+        <!-- 任务文字：支持最多 3 行自动折行 -->
         <TextView
             android:id="@+id/task_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:ellipsize="end"
-            android:maxLines="1"
+            android:maxLines="3"
             android:textColor="@color/widget_text_primary"
             android:textSize="15sp"
             android:textStyle="bold" />

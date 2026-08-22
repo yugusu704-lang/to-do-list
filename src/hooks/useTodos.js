@@ -109,28 +109,57 @@ export default function useTodos() {
   const addTodo = useCallback(({ text, dueAt = null, location = null }) => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    const now = Date.now();
     const newTodo = {
       id: generateId(),
       text: trimmed,
       completed: false,
       completedAt: null,
       category: null,
-      createdAt: Date.now(),
+      createdAt: now,
+      updatedAt: now,
       dueAt: dueAt || null,
       location: location?.trim() || null,
+      priority: 0,
+      notes: null,
+      deletedAt: null,
     };
     setTodos((prev) => [newTodo, ...prev]);
   }, []);
 
   // 切换完成状态（记录完成时间）
   const toggleTodo = useCallback((id) => {
+    const now = Date.now();
     setTodos((prev) =>
       prev.map((todo) =>
         todo.id === id
           ? {
               ...todo,
               completed: !todo.completed,
-              completedAt: !todo.completed ? Date.now() : null,
+              completedAt: !todo.completed ? now : null,
+              updatedAt: now,
+            }
+          : todo
+      )
+    );
+  }, []);
+
+  // 修改任务内容、时间、地点、备注等
+  const updateTodo = useCallback(({ id, text, dueAt = null, location = null, notes = null, priority = 0 }) => {
+    const trimmed = typeof text === 'string' ? text.trim() : '';
+    if (!trimmed) return;
+    const now = Date.now();
+    setTodos((prev) =>
+      prev.map((todo) =>
+        todo.id === id
+          ? {
+              ...todo,
+              text: trimmed,
+              dueAt: dueAt || null,
+              location: location?.trim() || null,
+              notes: notes?.trim() || null,
+              priority: typeof priority === 'number' ? priority : todo.priority,
+              updatedAt: now,
             }
           : todo
       )
@@ -175,5 +204,5 @@ export default function useTodos() {
     setLastRolloverCount(rolledCount);
   }, []);
 
-  return { todos, loadedPromise: loadedPromiseRef.current, lastRolloverCount, addTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative, rolloverOverdueTodos };
+  return { todos, loadedPromise: loadedPromiseRef.current, lastRolloverCount, addTodo, updateTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative, rolloverOverdueTodos };
 }

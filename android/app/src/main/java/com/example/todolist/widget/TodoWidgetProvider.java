@@ -17,8 +17,7 @@ import android.widget.RemoteViews;
 import com.example.todolist.MainActivity;
 import com.example.todolist.R;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import com.example.todolist.db.TodoDbHelper;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -32,8 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TodoWidgetProvider extends AppWidgetProvider {
 
-    static final String PREFS_NAME = "todo_prefs";
-    static final String KEY_TODOS = "todos_json";
     private static final String ACTION_COMPLETE = "com.example.todolist.COMPLETE_TODO";
     private static final String ACTION_ADD = "com.example.todolist.ADD_TODO";
     private static final String EXTRA_TODO_ID = "todo_id";
@@ -101,6 +98,9 @@ public class TodoWidgetProvider extends AppWidgetProvider {
             views.setTextViewText(R.id.widget_footer, todayTodos.size() + " 个待办任务");
         }
 
+        // 动态应用深浅色主题（同步 App 内部显示模式）
+        TodoWidgetTheme.applyThemeToWidget(context, views);
+
         // 空列表时显示空状态视图模板
         views.setEmptyView(R.id.widget_task_container, R.id.widget_empty);
 
@@ -109,7 +109,6 @@ public class TodoWidgetProvider extends AppWidgetProvider {
 
         // 设置 ListView 的点击模板（每个任务行的 PendingIntent 基础）
         // 必须使用显式 Intent + FLAG_MUTABLE，fillInIntent 才能合并 extras 到模板 Intent
-        // 注意：FLAG_IMMUTABLE 会忽略 fillInIntent 的所有额外参数，导致 todo_id 丢失
         Intent templateIntent = new Intent(context, TodoWidgetProvider.class);
         templateIntent.setAction(ACTION_COMPLETE);
         templateIntent.setPackage(context.getPackageName());
@@ -125,80 +124,24 @@ public class TodoWidgetProvider extends AppWidgetProvider {
 
     // ---- 数据读取 ----
 
-    // 读取今日待办：dueAt 在今天的未完成任务，按时间升序
+    // 读取今日待办：SQLite 直查 dueAt 在今天的未完成任务，按时间升序
     static List<TodoItem> loadTodayTodos(Context context) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String json = prefs.getString(KEY_TODOS, "[]");
         long todayStart = getTodayStartMillis();
         long todayEnd = todayStart + 86400000L;
 
-        List<TodoItem> result = new ArrayList<>();
-        try {
-            JSONArray arr = new JSONArray(json);
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject obj = arr.getJSONObject(i);
+        List<TodoDbHelper.WidgetTodoItem> dbItems = TodoDbHelper.getInstance(context)
+                .getTodayActiveTodosForWidget(todayStart, todayEnd, completingRows.keySet());
 
-                // 未完成任务才显示；仅"完成动效"播放期间短暂保留刚完成的行
-                if (obj.optBoolean("completed", false)
-                        && !completingRows.containsKey(obj.getString("id"))) continue;
-
-                // 解析 dueAt
-                long dueAt = parseDueAt(obj);
-                if (dueAt == 0) continue; // 没有时间的任务不显示
-
-                // 只显示今天的任务
-                if (dueAt < todayStart || dueAt >= todayEnd) continue;
-
-                TodoItem item = new TodoItem();
-                item.id = obj.getString("id");
-                item.text = obj.getString("text");
-                item.dueAt = dueAt;
-                item.location = obj.optString("location", null);
-                result.add(item);
-            }
-        } catch (Exception ignored) {
+        List<TodoItem> result = new ArrayList<>(dbItems.size());
+        for (TodoDbHelper.WidgetTodoItem item : dbItems) {
+            TodoItem ti = new TodoItem();
+            ti.id = item.id;
+            ti.text = item.text;
+            ti.dueAt = item.dueAt;
+            ti.location = item.location;
+            result.add(ti);
         }
-
-        // 按时间升序排序
-        Collections.sort(result, new Comparator<TodoItem>() {
-            @Override
-            public int compare(TodoItem a, TodoItem b) {
-                return Long.compare(a.dueAt, b.dueAt);
-            }
-        });
-
         return result;
-    }
-
-    // 解析 dueAt 字段（支持 ISO 字符串和时间戳）
-    private static long parseDueAt(JSONObject obj) {
-        try {
-            if (!obj.has("dueAt") || obj.isNull("dueAt")) return 0;
-
-            Object dueAtObj = obj.get("dueAt");
-            if (dueAtObj instanceof Number) {
-                return ((Number) dueAtObj).longValue();
-            }
-            if (dueAtObj instanceof String) {
-                String str = (String) dueAtObj;
-                if (str.isEmpty() || "null".equals(str)) return 0;
-
-                // ISO 格式
-                SimpleDateFormat sdf;
-                if (str.split(":").length == 2) {
-                    sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.getDefault());
-                } else {
-                    sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault());
-                }
-                Date date = sdf.parse(str);
-                if (date != null) return date.getTime();
-
-                // 尝试时间戳
-                return Long.parseLong(str);
-            }
-        } catch (Exception ignored) {
-        }
-        return 0;
     }
 
     private static long getTodayStartMillis() {
@@ -212,21 +155,10 @@ public class TodoWidgetProvider extends AppWidgetProvider {
 
     // ---- 交互 ----
 
-    // 标记任务完成（从今日待办中移除）
+    // 标记任务完成（更新 SQLite 状态）
     private void markCompleted(Context context, String todoId) {
-        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        String json = prefs.getString(KEY_TODOS, "[]");
         try {
-            JSONArray arr = new JSONArray(json);
-            for (int i = 0; i < arr.length(); i++) {
-                JSONObject obj = arr.getJSONObject(i);
-                if (todoId.equals(obj.getString("id"))) {
-                    obj.put("completed", true);
-                    obj.put("completedAt", System.currentTimeMillis());
-                    break;
-                }
-            }
-            prefs.edit().putString(KEY_TODOS, arr.toString()).apply();
+            TodoDbHelper.getInstance(context).setTodoCompleted(todoId, true, System.currentTimeMillis());
         } catch (Exception e) {
             Log.e(TAG, "markCompleted failed for " + todoId, e);
         }

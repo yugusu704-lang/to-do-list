@@ -65,7 +65,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
         {/* 添加按钮 */}
         <button
           type="submit"
-          className="h-11 rounded-xl bg-[#2F3437] text-[15px] font-medium text-white transition-all duration-150 hover:bg-[#1a1d1f] active:scale-[0.97]"
+          className="h-11 rounded-xl bg-btn-main text-[15px] font-medium text-white transition-all duration-150 hover:bg-btn-main-hover active:scale-[0.97]"
         >
           添加
         </button>
