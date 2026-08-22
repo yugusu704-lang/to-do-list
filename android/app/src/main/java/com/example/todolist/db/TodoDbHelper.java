@@ -179,7 +179,99 @@ public class TodoDbHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * 事务批量全量/增量保存任务
+     * 全量同步任务列表：事务内更新/插入当前有效任务，并删除已不在列表中的已删除任务
+     */
+    public synchronized void syncTodos(JSONArray todos) {
+        if (todos == null) return;
+        SQLiteDatabase db = getWritableDatabase();
+        db.beginTransaction();
+        try {
+            long now = System.currentTimeMillis();
+            List<String> currentIds = new ArrayList<>();
+
+            for (int i = 0; i < todos.length(); i++) {
+                JSONObject obj = todos.getJSONObject(i);
+                ContentValues cv = new ContentValues();
+
+                String id = obj.getString("id");
+                currentIds.add(id);
+
+                cv.put(COL_ID, id);
+                cv.put(COL_TEXT, obj.getString("text"));
+                cv.put(COL_COMPLETED, obj.optBoolean("completed", false) ? 1 : 0);
+
+                if (obj.has("completedAt") && !obj.isNull("completedAt")) {
+                    cv.put(COL_COMPLETED_AT, obj.getLong("completedAt"));
+                } else {
+                    cv.putNull(COL_COMPLETED_AT);
+                }
+
+                long createdAt = obj.optLong("createdAt", now);
+                cv.put(COL_CREATED_AT, createdAt);
+
+                long updatedAt = obj.optLong("updatedAt", now);
+                cv.put(COL_UPDATED_AT, updatedAt);
+
+                if (obj.has("dueAt") && !obj.isNull("dueAt")) {
+                    cv.put(COL_DUE_AT, obj.getString("dueAt"));
+                } else {
+                    cv.putNull(COL_DUE_AT);
+                }
+
+                if (obj.has("location") && !obj.isNull("location")) {
+                    cv.put(COL_LOCATION, obj.getString("location"));
+                } else {
+                    cv.putNull(COL_LOCATION);
+                }
+
+                if (obj.has("category") && !obj.isNull("category")) {
+                    cv.put(COL_CATEGORY, obj.getString("category"));
+                } else {
+                    cv.putNull(COL_CATEGORY);
+                }
+
+                cv.put(COL_PRIORITY, obj.optInt("priority", 0));
+
+                if (obj.has("notes") && !obj.isNull("notes")) {
+                    cv.put(COL_NOTES, obj.getString("notes"));
+                } else {
+                    cv.putNull(COL_NOTES);
+                }
+
+                if (obj.has("deletedAt") && !obj.isNull("deletedAt")) {
+                    cv.put(COL_DELETED_AT, obj.getLong("deletedAt"));
+                } else {
+                    cv.putNull(COL_DELETED_AT);
+                }
+
+                db.insertWithOnConflict(TABLE_TODOS, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+            }
+
+            // 同步清理已删除任务：删除不在当前列表中的所有记录
+            if (currentIds.isEmpty()) {
+                db.delete(TABLE_TODOS, null, null);
+            } else {
+                StringBuilder placeholders = new StringBuilder();
+                for (int i = 0; i < currentIds.size(); i++) {
+                    placeholders.append("?");
+                    if (i < currentIds.size() - 1) {
+                        placeholders.append(",");
+                    }
+                }
+                String[] args = currentIds.toArray(new String[0]);
+                db.delete(TABLE_TODOS, COL_ID + " NOT IN (" + placeholders.toString() + ")", args);
+            }
+
+            db.setTransactionSuccessful();
+        } catch (Exception e) {
+            Log.e(TAG, "syncTodos transaction failed", e);
+        } finally {
+            db.endTransaction();
+        }
+    }
+
+    /**
+     * 事务批量增量/全量插入或更新任务（仅更新，不删除）
      */
     public synchronized void insertOrUpdateTodos(JSONArray todos) {
         if (todos == null) return;

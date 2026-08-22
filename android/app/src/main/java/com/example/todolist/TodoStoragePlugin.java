@@ -34,13 +34,13 @@ public class TodoStoragePlugin extends Plugin {
         call.resolve(result);
     }
 
-    // 事务批量保存任务到 SQLite，并通知小部件刷新
+    // 事务批量同步保存任务到 SQLite（更新有效任务并清理已删除任务），并通知小部件刷新
     @PluginMethod
     public void save(PluginCall call) {
         String json = call.getString("data", "[]");
         try {
             JSONArray arr = new JSONArray(json);
-            TodoDbHelper.getInstance(getContext()).insertOrUpdateTodos(arr);
+            TodoDbHelper.getInstance(getContext()).syncTodos(arr);
         } catch (Exception e) {
             // 静默处理解析异常
         }
