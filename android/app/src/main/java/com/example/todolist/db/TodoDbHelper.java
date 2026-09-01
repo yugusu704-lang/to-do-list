@@ -23,7 +23,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "TodoDbHelper";
     private static final String DATABASE_NAME = "todos.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     public static final String TABLE_TODOS = "todos";
     public static final String COL_ID = "id";
@@ -38,6 +38,8 @@ public class TodoDbHelper extends SQLiteOpenHelper {
     public static final String COL_PRIORITY = "priority";
     public static final String COL_NOTES = "notes";
     public static final String COL_DELETED_AT = "deleted_at";
+    public static final String COL_IS_ROUTINE = "is_routine";
+    public static final String COL_LAST_COMPLETED_DATE = "last_completed_date";
 
     private static final String OLD_PREFS_NAME = "todo_prefs";
     private static final String OLD_KEY_TODOS = "todos_json";
@@ -70,7 +72,9 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 + COL_CATEGORY + " TEXT, "
                 + COL_PRIORITY + " INTEGER NOT NULL DEFAULT 0, "
                 + COL_NOTES + " TEXT, "
-                + COL_DELETED_AT + " INTEGER"
+                + COL_DELETED_AT + " INTEGER, "
+                + COL_IS_ROUTINE + " INTEGER NOT NULL DEFAULT 0, "
+                + COL_LAST_COMPLETED_DATE + " TEXT"
                 + ");";
         db.execSQL(createTableSql);
 
@@ -79,11 +83,22 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 + " (" + COL_COMPLETED + ", " + COL_DUE_AT + ", " + COL_DELETED_AT + ");");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_created ON " + TABLE_TODOS
                 + " (" + COL_CREATED_AT + " DESC);");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_routine ON " + TABLE_TODOS
+                + " (" + COL_IS_ROUTINE + ", " + COL_COMPLETED + ");");
     }
 
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // 未来升级扩展
+        if (oldVersion < 2) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_TODOS + " ADD COLUMN " + COL_IS_ROUTINE + " INTEGER NOT NULL DEFAULT 0;");
+                db.execSQL("ALTER TABLE " + TABLE_TODOS + " ADD COLUMN " + COL_LAST_COMPLETED_DATE + " TEXT;");
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_routine ON " + TABLE_TODOS
+                        + " (" + COL_IS_ROUTINE + ", " + COL_COMPLETED + ");");
+            } catch (Exception e) {
+                Log.e(TAG, "Upgrade from v" + oldVersion + " to v" + newVersion + " failed", e);
+            }
+        }
     }
 
     /**
@@ -166,6 +181,11 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 String notes = cursor.getString(cursor.getColumnIndexOrThrow(COL_NOTES));
                 obj.put("notes", notes != null && !notes.isEmpty() ? notes : JSONObject.NULL);
 
+                obj.put("isRoutine", cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_ROUTINE)) == 1);
+
+                String lastCompletedDate = cursor.getString(cursor.getColumnIndexOrThrow(COL_LAST_COMPLETED_DATE));
+                obj.put("lastCompletedDate", lastCompletedDate != null && !lastCompletedDate.isEmpty() ? lastCompletedDate : JSONObject.NULL);
+
                 result.put(obj);
             }
         } catch (Exception e) {
@@ -242,6 +262,14 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                     cv.put(COL_DELETED_AT, obj.getLong("deletedAt"));
                 } else {
                     cv.putNull(COL_DELETED_AT);
+                }
+
+                cv.put(COL_IS_ROUTINE, obj.optBoolean("isRoutine", false) ? 1 : 0);
+
+                if (obj.has("lastCompletedDate") && !obj.isNull("lastCompletedDate")) {
+                    cv.put(COL_LAST_COMPLETED_DATE, obj.getString("lastCompletedDate"));
+                } else {
+                    cv.putNull(COL_LAST_COMPLETED_DATE);
                 }
 
                 db.insertWithOnConflict(TABLE_TODOS, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
@@ -332,6 +360,14 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                     cv.putNull(COL_DELETED_AT);
                 }
 
+                cv.put(COL_IS_ROUTINE, obj.optBoolean("isRoutine", false) ? 1 : 0);
+
+                if (obj.has("lastCompletedDate") && !obj.isNull("lastCompletedDate")) {
+                    cv.put(COL_LAST_COMPLETED_DATE, obj.getString("lastCompletedDate"));
+                } else {
+                    cv.putNull(COL_LAST_COMPLETED_DATE);
+                }
+
                 db.insertWithOnConflict(TABLE_TODOS, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
             }
             db.setTransactionSuccessful();
@@ -351,8 +387,11 @@ public class TodoDbHelper extends SQLiteOpenHelper {
         cv.put(COL_COMPLETED, completed ? 1 : 0);
         if (completed) {
             cv.put(COL_COMPLETED_AT, completedAt);
+            String todayKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(completedAt));
+            cv.put(COL_LAST_COMPLETED_DATE, todayKey);
         } else {
             cv.putNull(COL_COMPLETED_AT);
+            cv.putNull(COL_LAST_COMPLETED_DATE);
         }
         cv.put(COL_UPDATED_AT, System.currentTimeMillis());
         db.update(TABLE_TODOS, cv, COL_ID + " = ?", new String[]{id});
@@ -370,6 +409,26 @@ public class TodoDbHelper extends SQLiteOpenHelper {
     }
 
     /**
+     * 每日凌晨 0:00 零点重置已完成的日常习惯事项
+     */
+    public synchronized int resetDailyRoutinesForMidnight(long todayStart) {
+        String todayKey = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(new Date(todayStart));
+        SQLiteDatabase db = getWritableDatabase();
+        ContentValues cv = new ContentValues();
+        cv.put(COL_COMPLETED, 0);
+        cv.putNull(COL_COMPLETED_AT);
+        cv.put(COL_UPDATED_AT, System.currentTimeMillis());
+
+        // 重置所有在今天之前已完成的每日必做事项
+        int resetCount = db.update(TABLE_TODOS, cv,
+                COL_DELETED_AT + " IS NULL AND " + COL_IS_ROUTINE + " = 1 AND " + COL_COMPLETED + " = 1 AND ("
+                        + COL_LAST_COMPLETED_DATE + " IS NULL OR " + COL_LAST_COMPLETED_DATE + " < ?)",
+                new String[]{todayKey});
+        Log.i(TAG, "resetDailyRoutinesForMidnight: reset " + resetCount + " routines for todayKey=" + todayKey);
+        return resetCount;
+    }
+
+    /**
      * 供小组件使用的今日待办任务数据结构
      */
     public static class WidgetTodoItem {
@@ -377,23 +436,25 @@ public class TodoDbHelper extends SQLiteOpenHelper {
         public String text;
         public long dueAt;
         public String location;
+        public boolean isRoutine;
     }
 
     /**
-     * 小组件直接查询：今天未完成的任务，按时间升序
+     * 小组件直接查询：今天未完成的任务（含每日必做），按时间升序
      */
     public synchronized List<WidgetTodoItem> getTodayActiveTodosForWidget(long todayStart, long todayEnd, java.util.Set<String> completingIds) {
         List<WidgetTodoItem> result = new ArrayList<>();
         SQLiteDatabase db = getReadableDatabase();
         Cursor cursor = null;
         try {
-            // 查询未删除且未完成的任务（或正在播放完成动效的任务）
-            String selection = COL_DELETED_AT + " IS NULL AND " + COL_DUE_AT + " IS NOT NULL AND " + COL_DUE_AT + " != ''";
+            // 查询未删除的任务
+            String selection = COL_DELETED_AT + " IS NULL";
             cursor = db.query(TABLE_TODOS, null, selection, null, null, null, null);
 
             while (cursor.moveToNext()) {
                 String id = cursor.getString(cursor.getColumnIndexOrThrow(COL_ID));
                 boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(COL_COMPLETED)) == 1;
+                boolean isRoutine = cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_ROUTINE)) == 1;
 
                 // 已完成任务仅在动效期间显示
                 if (completed && (completingIds == null || !completingIds.contains(id))) {
@@ -402,16 +463,21 @@ public class TodoDbHelper extends SQLiteOpenHelper {
 
                 String dueAtStr = cursor.getString(cursor.getColumnIndexOrThrow(COL_DUE_AT));
                 long dueAt = parseDueAtStr(dueAtStr);
-                if (dueAt == 0) continue;
 
-                // 范围检查：是否在今日 0:00 ~ 24:00
-                if (dueAt < todayStart || dueAt >= todayEnd) continue;
+                // 筛选条件：
+                // 1) 设定了今天的时间 (todayStart <= dueAt < todayEnd)
+                // 2) 或者是每日必做习惯 (isRoutine = 1，不论有无设定具体小时，均属于今日必做)
+                boolean isToday = (dueAt >= todayStart && dueAt < todayEnd);
+                if (!isToday && !isRoutine) {
+                    continue;
+                }
 
                 WidgetTodoItem item = new WidgetTodoItem();
                 item.id = id;
                 item.text = cursor.getString(cursor.getColumnIndexOrThrow(COL_TEXT));
                 item.dueAt = dueAt;
                 item.location = cursor.getString(cursor.getColumnIndexOrThrow(COL_LOCATION));
+                item.isRoutine = isRoutine;
                 result.add(item);
             }
         } catch (Exception e) {
@@ -422,10 +488,15 @@ public class TodoDbHelper extends SQLiteOpenHelper {
             }
         }
 
-        // 按时间升序排序
+        // 排序规则：按时间升序；未设具体时间的排在前面或后面
         Collections.sort(result, new Comparator<WidgetTodoItem>() {
             @Override
             public int compare(WidgetTodoItem a, WidgetTodoItem b) {
+                // 如果都有时间，按时间升序
+                if (a.dueAt > 0 && b.dueAt > 0) {
+                    return Long.compare(a.dueAt, b.dueAt);
+                }
+                // 无时间的排在有时间的上方，或者下方：按 a.dueAt > 0 排序
                 return Long.compare(a.dueAt, b.dueAt);
             }
         });

@@ -115,4 +115,28 @@ describe('TodoItem', () => {
     expect(onUpdate).not.toHaveBeenCalled();
     expect(screen.getByText('测试任务')).toBeInTheDocument();
   });
+
+  test('isRoutine 为 true 时显示专属“每日”徽标', () => {
+    const routineTodo = { ...baseTodo, isRoutine: true };
+    render(<TodoItem todo={routineTodo} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('每日')).toBeInTheDocument();
+  });
+
+  test('编辑模式下可以切换“每日”属性并保存', () => {
+    const onUpdate = vi.fn();
+    render(<TodoItem todo={baseTodo} onToggle={vi.fn()} onDelete={vi.fn()} onUpdate={onUpdate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /编辑任务/ }));
+
+    const routineToggle = screen.getByRole('button', { name: /每日/ });
+    fireEvent.click(routineToggle);
+
+    fireEvent.click(screen.getByRole('button', { name: /保存/ }));
+
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      id: '1',
+      isRoutine: true,
+    }));
+  });
 });

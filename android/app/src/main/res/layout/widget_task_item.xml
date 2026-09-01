@@ -43,13 +43,35 @@
             android:textSize="15sp"
             android:textStyle="bold" />
 
-        <!-- 时间 + 地点 行 -->
+        <!-- 时间 + 每日标识 + 地点 行 -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:layout_marginTop="2dp">
+
+            <!-- 每日习惯专属徽标 -->
+            <TextView
+                android:id="@+id/task_routine_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="每日"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="11sp"
+                android:drawableStart="@drawable/ic_repeat_12dp"
+                android:drawablePadding="2dp"
+                android:visibility="gone" />
+
+            <!-- 每日与时间的间隔点 -->
+            <TextView
+                android:id="@+id/task_routine_separator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" • "
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp"
+                android:visibility="gone" />
 
             <!-- 时间 -->
             <TextView

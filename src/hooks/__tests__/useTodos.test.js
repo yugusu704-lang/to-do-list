@@ -384,4 +384,113 @@ describe('useTodos', () => {
     expect(result.current.todos[0].dueAt).toBe('2020-08-06T09:00');
     expect(result.current.lastRolloverCount).toBe(0);
   });
+
+  // ---------- 每日必做事项 (isRoutine) 行为测试 ----------
+
+  test('添加每日必做任务', () => {
+    const { result } = renderHook(() => useTodos());
+
+    act(() => {
+      result.current.addTodo({
+        text: '吃钙片',
+        isRoutine: true,
+        dueAt: `${todayKey()}T08:00`,
+      });
+    });
+
+    expect(result.current.todos).toHaveLength(1);
+    expect(result.current.todos[0].text).toBe('吃钙片');
+    expect(result.current.todos[0].isRoutine).toBe(true);
+    expect(result.current.todos[0].lastCompletedDate).toBeNull();
+  });
+
+  test('切换每日必做事项打卡状态时，记录 lastCompletedDate 为今天', () => {
+    const { result } = renderHook(() => useTodos());
+
+    act(() => {
+      result.current.addTodo({
+        text: '吃钙片',
+        isRoutine: true,
+      });
+    });
+
+    const id = result.current.todos[0].id;
+
+    // 打卡完成
+    act(() => {
+      result.current.toggleTodo(id);
+    });
+
+    expect(result.current.todos[0].completed).toBe(true);
+    expect(result.current.todos[0].lastCompletedDate).toBe(todayKey());
+
+    // 取消打卡
+    act(() => {
+      result.current.toggleTodo(id);
+    });
+
+    expect(result.current.todos[0].completed).toBe(false);
+    expect(result.current.todos[0].lastCompletedDate).toBeNull();
+  });
+
+  test('clearCompleted 清理已完成任务时，保留每日习惯不被清除', () => {
+    const { result } = renderHook(() => useTodos());
+
+    act(() => {
+      result.current.addTodo({ text: '一次性任务 1' });
+      result.current.addTodo({ text: '吃钙片', isRoutine: true });
+    });
+
+    const normalId = result.current.todos[1].id;
+    const routineId = result.current.todos[0].id;
+
+    // 两者都打勾完成
+    act(() => {
+      result.current.toggleTodo(normalId);
+      result.current.toggleTodo(routineId);
+    });
+
+    expect(result.current.todos.filter((t) => t.completed)).toHaveLength(2);
+
+    // 点击清除已完成
+    act(() => {
+      const removed = result.current.clearCompleted();
+      expect(removed).toHaveLength(1);
+      expect(removed[0].id).toBe(normalId);
+    });
+
+    // 仅剩每日习惯，一次性任务被清除
+    expect(result.current.todos).toHaveLength(1);
+    expect(result.current.todos[0].id).toBe(routineId);
+    expect(result.current.todos[0].isRoutine).toBe(true);
+  });
+
+  test('30天自动清理 autoClean 保护每日习惯', async () => {
+    const oldTimestamp = Date.now() - 40 * 24 * 60 * 60 * 1000; // 40天前
+    localStorage.setItem('todos', JSON.stringify([
+      seedTodo({
+        id: 'old-routine',
+        text: '老习惯',
+        completed: true,
+        completedAt: oldTimestamp,
+        isRoutine: true,
+        lastCompletedDate: todayKey(),
+      }),
+      seedTodo({
+        id: 'old-normal',
+        text: '老普通任务',
+        completed: true,
+        completedAt: oldTimestamp,
+        isRoutine: false,
+      }),
+    ]));
+
+    const { result } = renderHook(() => useTodos());
+    await result.current.loadedPromise;
+    await waitFor(() => expect(result.current.todos).toHaveLength(1));
+
+    // 老习惯被保留，老普通任务被清除
+    expect(result.current.todos[0].id).toBe('old-routine');
+    expect(result.current.todos[0].isRoutine).toBe(true);
+  });
 });

@@ -66,14 +66,26 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         // 任务内容
         v.setTextViewText(R.id.task_text, item.text);
 
+        // 每日习惯专属徽标
+        if (item.isRoutine) {
+            v.setViewVisibility(R.id.task_routine_badge, android.view.View.VISIBLE);
+        } else {
+            v.setViewVisibility(R.id.task_routine_badge, android.view.View.GONE);
+        }
+
         // 时间
-        if (item.dueAt > 0) {
+        boolean hasTime = item.dueAt > 0;
+        if (hasTime) {
             SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
             v.setTextViewText(R.id.task_time, sdf.format(new Date(item.dueAt)));
             v.setViewVisibility(R.id.task_time, android.view.View.VISIBLE);
         } else {
             v.setViewVisibility(R.id.task_time, android.view.View.GONE);
         }
+
+        // 每日徽标与时间的分隔符
+        v.setViewVisibility(R.id.task_routine_separator,
+                (item.isRoutine && hasTime) ? android.view.View.VISIBLE : android.view.View.GONE);
 
         // 地点
         boolean hasLocation = item.location != null && !item.location.isEmpty();
@@ -84,10 +96,10 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
             v.setViewVisibility(R.id.task_location, android.view.View.GONE);
         }
 
-        // 分隔符：仅当时间+地点都存在时显示
-        boolean hasTime = item.dueAt > 0;
+        // 时间/每日 与 地点间的分隔符
+        boolean hasLeft = hasTime || item.isRoutine;
         v.setViewVisibility(R.id.task_separator,
-                (hasTime && hasLocation) ? android.view.View.VISIBLE : android.view.View.GONE);
+                (hasLeft && hasLocation) ? android.view.View.VISIBLE : android.view.View.GONE);
 
         // 复选框与主题配色：根据 App 当前主题模式动态渲染
         Float alpha = TodoWidgetProvider.completingRows.get(item.id);
@@ -147,6 +159,7 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
             ti.text = item.text;
             ti.dueAt = item.dueAt;
             ti.location = item.location;
+            ti.isRoutine = item.isRoutine;
             todoItems.add(ti);
         }
     }
@@ -167,5 +180,6 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         String text;
         long dueAt;
         String location;
+        boolean isRoutine;
     }
 }

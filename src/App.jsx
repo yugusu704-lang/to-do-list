@@ -5,6 +5,7 @@ import useTheme from './hooks/useTheme';
 import TodoStorage from './plugins/todoStorage';
 import FilterTabs from './components/FilterTabs';
 import TodoList from './components/TodoList';
+import DailyRoutineSection from './components/DailyRoutineSection';
 import AddTodo from './components/AddTodo';
 import ThemeToggle from './components/ThemeToggle';
 
@@ -64,6 +65,9 @@ export default function App() {
 
   const activeCount = todos.filter((t) => !t.completed).length;
   const completedCount = todos.filter((t) => t.completed).length;
+  // 分离每日必做习惯与普通日程任务
+  const routines = todos.filter((t) => t.isRoutine);
+  const normalTodos = todos.filter((t) => !t.isRoutine);
 
   // 清除已完成 + 显示撤销 toast
   const handleClearCompleted = () => {
@@ -152,11 +156,21 @@ export default function App() {
         <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
 
         {/* 任务列表（独立滚动区，底部导航栏固定不动） */}
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+          {/* 独立每日习惯打卡专区 */}
+          <DailyRoutineSection
+            routines={routines}
+            filter={filter}
+            onToggle={toggleTodo}
+            onDelete={deleteTodo}
+            onUpdate={updateTodo}
+          />
+
           <TodoList
             key={dayKey}
-            todos={todos}
+            todos={normalTodos}
             filter={filter}
+            hasOtherContent={routines.length > 0}
             onToggle={toggleTodo}
             onDelete={deleteTodo}
             onUpdate={updateTodo}

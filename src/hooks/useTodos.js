@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import TodoStorage from '../plugins/todoStorage';
-import { rolloverOverdue } from '../utils/rolloverOverdue';
+import { rolloverOverdue, getLocalDateKey } from '../utils/rolloverOverdue';
 
 const STORAGE_KEY = 'todos';
 const AUTO_CLEAN_DAYS = 30;
@@ -61,11 +61,12 @@ async function saveTodosAsync(todos) {
   } catch {}
 }
 
-// 清理完成超过 30 天的任务
+// 清理完成超过 30 天的任务（每日习惯永久保留）
 function autoClean(todos) {
   const now = Date.now();
   const threshold = AUTO_CLEAN_DAYS * 24 * 60 * 60 * 1000;
   return todos.filter((todo) => {
+    if (todo.isRoutine) return true;
     if (!todo.completed) return true;
     if (!todo.completedAt) return true;
     return now - todo.completedAt < threshold;
@@ -106,7 +107,7 @@ export default function useTodos() {
   }, [todos]);
 
   // 添加任务
-  const addTodo = useCallback(({ text, dueAt = null, location = null }) => {
+  const addTodo = useCallback(({ text, dueAt = null, location = null, isRoutine = false }) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     const now = Date.now();
@@ -123,29 +124,35 @@ export default function useTodos() {
       priority: 0,
       notes: null,
       deletedAt: null,
+      isRoutine: Boolean(isRoutine),
+      lastCompletedDate: null,
     };
     setTodos((prev) => [newTodo, ...prev]);
   }, []);
 
-  // 切换完成状态（记录完成时间）
+  // 切换完成状态（记录完成时间与打卡日期）
   const toggleTodo = useCallback((id) => {
     const now = Date.now();
+    const todayKey = getLocalDateKey(new Date(now));
     setTodos((prev) =>
-      prev.map((todo) =>
-        todo.id === id
-          ? {
-              ...todo,
-              completed: !todo.completed,
-              completedAt: !todo.completed ? now : null,
-              updatedAt: now,
-            }
-          : todo
-      )
+      prev.map((todo) => {
+        if (todo.id !== id) return todo;
+        const nextCompleted = !todo.completed;
+        return {
+          ...todo,
+          completed: nextCompleted,
+          completedAt: nextCompleted ? now : null,
+          lastCompletedDate: todo.isRoutine
+            ? (nextCompleted ? todayKey : null)
+            : (todo.lastCompletedDate || null),
+          updatedAt: now,
+        };
+      })
     );
   }, []);
 
-  // 修改任务内容、时间、地点、备注等
-  const updateTodo = useCallback(({ id, text, dueAt = null, location = null, notes = null, priority = 0 }) => {
+  // 修改任务内容、时间、地点、备注、习惯属性等
+  const updateTodo = useCallback(({ id, text, dueAt = null, location = null, notes = null, priority = 0, isRoutine }) => {
     const trimmed = typeof text === 'string' ? text.trim() : '';
     if (!trimmed) return;
     const now = Date.now();
@@ -159,6 +166,7 @@ export default function useTodos() {
               location: location?.trim() || null,
               notes: notes?.trim() || null,
               priority: typeof priority === 'number' ? priority : todo.priority,
+              isRoutine: typeof isRoutine === 'boolean' ? isRoutine : Boolean(todo.isRoutine),
               updatedAt: now,
             }
           : todo
@@ -171,11 +179,11 @@ export default function useTodos() {
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
   }, []);
 
-  // 清除所有已完成任务（返回被清除的任务，用于撤销）
+  // 清除所有已完成任务（返回被清除的任务，用于撤销；保护每日习惯不被清除）
   const clearCompleted = useCallback(() => {
-    const removed = todos.filter((t) => t.completed);
+    const removed = todos.filter((t) => t.completed && !t.isRoutine);
     if (removed.length > 0) {
-      setTodos((prev) => prev.filter((t) => !t.completed));
+      setTodos((prev) => prev.filter((t) => !t.completed || t.isRoutine));
     }
     return removed;
   }, [todos]);

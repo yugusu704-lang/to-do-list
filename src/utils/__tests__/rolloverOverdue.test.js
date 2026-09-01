@@ -156,4 +156,70 @@ describe('rolloverOverdue', () => {
     expect(result.rolledCount).toBe(0);
     expect(result.todos).toBe(original); // 严格相等：原引用
   });
+
+  describe('每日必做事项 (isRoutine)', () => {
+    test('昨天已打卡的日常习惯，跨天自动重置为未完成', () => {
+      const routine = makeTodo({
+        id: 'r1',
+        text: '吃钙片',
+        isRoutine: true,
+        completed: true,
+        completedAt: 1722700000000,
+        lastCompletedDate: '2026-08-03',
+        dueAt: '2026-08-03T08:00',
+      });
+      const { todos, rolledCount } = rolloverOverdue([routine], NOW);
+      expect(rolledCount).toBe(1);
+      expect(todos[0].completed).toBe(false);
+      expect(todos[0].completedAt).toBe(null);
+      expect(todos[0].dueAt).toBe('2026-08-04T08:00');
+    });
+
+    test('无时间的日常习惯，跨天同样重置为未完成', () => {
+      const routine = makeTodo({
+        id: 'r2',
+        text: '喝水打卡',
+        isRoutine: true,
+        completed: true,
+        completedAt: 1722700000000,
+        lastCompletedDate: '2026-08-03',
+        dueAt: null,
+      });
+      const { todos, rolledCount } = rolloverOverdue([routine], NOW);
+      expect(rolledCount).toBe(1);
+      expect(todos[0].completed).toBe(false);
+      expect(todos[0].completedAt).toBe(null);
+    });
+
+    test('今天已打卡的日常习惯，今天内保持完成状态不被重置', () => {
+      const routine = makeTodo({
+        id: 'r3',
+        text: '晨跑',
+        isRoutine: true,
+        completed: true,
+        completedAt: 1722750000000,
+        lastCompletedDate: '2026-08-04',
+        dueAt: '2026-08-04T07:00',
+      });
+      const { todos, rolledCount } = rolloverOverdue([routine], NOW);
+      expect(rolledCount).toBe(0);
+      expect(todos[0].completed).toBe(true);
+      expect(todos[0]).toBe(routine);
+    });
+
+    test('昨天漏做未完成的习惯：合并顺延，绝不堆叠生成新条目', () => {
+      const routine = makeTodo({
+        id: 'r4',
+        text: '吃钙片',
+        isRoutine: true,
+        completed: false,
+        dueAt: '2026-08-03T08:00',
+      });
+      const { todos, rolledCount } = rolloverOverdue([routine], NOW);
+      expect(rolledCount).toBe(1);
+      expect(todos).toHaveLength(1);
+      expect(todos[0].completed).toBe(false);
+      expect(todos[0].dueAt).toBe('2026-08-04T08:00');
+    });
+  });
 });

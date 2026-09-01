@@ -1,415 +1,666 @@
-# HANDOFF.md — 项目交接文档
+# HANDOFF.md — 项目完整交接文档
 
-> 生成时间：2026-08-01（v15 更新）
-> 开发环境：VS Code + Claude 插件
-> 测试设备：Xiaomi 14 (MIUI, Android 15, API 34+)
+> **生成时间**：2026-09-01（基于全量代码扫描，由 Antigravity AI 生成）
+> **当前版本**：v27（`.apk-version` 文件）
+> **开发环境**：VS Code + Antigravity / Claude 插件
+> **测试设备**：Xiaomi 14（MIUI, Android 15, API 34+）
+
+---
+
+## 目录
+
+1. [项目概述](#一项目概述)
+2. [技术栈与依赖](#二技术栈与依赖)
+3. [完整目录结构](#三完整目录结构)
+4. [架构设计](#四架构设计)
+5. [核心模块详解](#五核心模块详解)
+6. [数据流与存储](#六数据流与存储)
+7. [Android 小组件系统](#七android-小组件系统)
+8. [已解决的技术难题](#八已解决的技术难题)
+9. [版本更新历史](#九版本更新历史)
+10. [已知问题与待优化](#十已知问题与待优化)
+11. [构建与发布流程](#十一构建与发布流程)
+12. [调试手册](#十二调试手册)
+13. [后续开发建议](#十三后续开发建议)
+14. [参考文档](#十四参考文档)
 
 ---
 
 ## 一、项目概述
 
 ### 1.1 项目名称
-**待办清单 (To-Do List)** — Android 桌面小组件待办应用
+**待办清单（To-Do List）** — Android 个人日常任务管理 App + 桌面小组件
 
-### 1.2 技术栈
-| 层级 | 技术 | 版本 |
-|------|------|------|
-| 前端框架 | React + Vite | React 18+ / Vite 8.x |
-| 样式 | Tailwind CSS | v4 |
-| 移动端框架 | Capacitor | 8.4.2 |
-| 目标平台 | Android (API 34+) | Android 14+ |
-| 测试设备 | Xiaomi 14 (MIUI, Android 15) | — |
-| 语言 | JavaScript (前端) + Java (Android 原生) | JDK 17 |
+### 1.2 核心目标
+- 个人使用的极简任务管理工具
+- 原生体验的 Android 桌面小组件（可直接在桌面查看并完成今日任务）
+- 离线优先，无需账号，数据本地存储
 
 ### 1.3 仓库信息
-- **GitHub**: https://github.com/yugusu704-lang/to-do-list
-- **最新 Release**: v15（GitHub Releases 页面）
-- **项目路径**: `D:\to-do-list`
-- **当前分支**: `master`
+- **GitHub**：https://github.com/yugusu704-lang/to-do-list
+- **本地路径**：`D:\to-do-list`
+- **主分支**：`master`
+- **当前版本**：v27
 
-### 1.4 核心功能
-1. 待办任务 CRUD（创建、读取、更新、删除）
-2. 任务支持：内容文字、截止时间（dueAt）、地点（location）
-3. Android 桌面小组件（4×2 和 4×3 两种尺寸）
-4. 小组件显示"今日待办"（只显示 dueAt 在今天的未完成任务）
-5. 小组件支持**垂直滚动浏览**（v12 新增，ListView + RemoteViewsService）
-6. 小组件内点击复选框可标记完成（完成后从小组件中移除）
-7. SharedPreferences 统一数据源（Web 端 + 原生共享）
-8. 按日期分组显示（今天/明天/后天/具体日期/已过期）
-9. 自动清理 30 天以上已完成任务
-10. **底部导航栏固定**（v15 新增，筛选标签和添加按钮不随列表滚动）
-11. **任务按时间排序**（v15 新增，无时间任务在前，有任务按截止时间升序）
+### 1.4 已实现功能清单
+
+| 功能 | 状态 | 引入版本 |
+|------|------|---------|
+| 任务 CRUD（增删改查） | ✅ | v1 |
+| 任务持久化（SQLite） | ✅ | v17 |
+| SharedPreferences → SQLite 自动迁移 | ✅ | v17 |
+| 桌面小组件（4×2 + 4×3） | ✅ | v8 |
+| 小组件 ListView 垂直滚动 | ✅ | v12 |
+| 小组件 checkbox 点击标记完成 | ✅ | v12 |
+| 小组件标记完成淡出动效 | ✅ | v22+ |
+| 小组件「+」按钮深度链接到 App 添加框 | ✅ | v12+ |
+| 小组件每日 0:00 自动刷新 | ✅ | v12 |
+| 小组件主题跟随 App（浅/深色/系统） | ✅ | v22+ |
+| 按日期分组显示（今天/明天/后天/已过期） | ✅ | v10+ |
+| 组内按截止时间升序 | ✅ | v15 |
+| 过期任务自动顺延到今天（0:00 触发） | ✅ | v16+ |
+| 任务就地编辑（铅笔按钮触发，防误触） | ✅ | v18/v21 |
+| 清除已完成 + 撤销 Toast | ✅ | v16+ |
+| 底部导航栏固定（不随列表滚动） | ✅ | v15 |
+| 深色模式（App + 小组件联动） | ✅ | v22+ |
+| 三态主题切换（浅色/深色/跟随系统） | ✅ | v22+ |
+| 自动清理 30 天以上已完成任务 | ✅ | v10+ |
+| 长文字自动折行（App + 小组件） | ✅ | v19 |
 
 ---
 
-## 二、项目目录结构
+## 二、技术栈与依赖
+
+### 2.1 前端
+
+| 技术 | 版本 | 说明 |
+|------|------|------|
+| React | ^19.2.8 | 函数组件 + Hooks，无 Redux |
+| Vite | ^8.1.5 | 构建工具，配置 `base: './'` 供 Capacitor 8 使用 |
+| Tailwind CSS | ^4.3.3 | v4 版本，使用 `@tailwindcss/vite` 插件集成 |
+| Vitest | ^4.1.10 | 单元测试框架 |
+| @testing-library/react | ^16.3.2 | 组件测试库 |
+| jsdom | ^30.0.1 | 测试 DOM 环境 |
+
+### 2.2 原生层
+
+| 技术 | 版本 | 说明 |
+|------|------|------|
+| Capacitor | ^8.4.2 | Web → Android APK 桥接层 |
+| @capacitor/android | ^8.4.2 | Android 平台支持 |
+| @capacitor/app | ^8.1.1 | 应用生命周期事件（appStateChange） |
+| Java | JDK 17 | Android 原生代码语言 |
+| Android SDK | API 34+ | 目标平台，minSdk 22 |
+| SQLite | 系统内置 | 通过 `android.database.sqlite` 原生访问 |
+
+### 2.3 构建工具链
+
+```
+Node.js → Vite → dist/ → npx cap sync → android/ → Gradle → APK
+```
+
+**npm 脚本速查**：
+
+```bash
+npm run dev           # 启动开发服务器（localhost:5173）
+npm run build         # 构建前端（输出 dist/）
+npm run test          # 单次跑全部测试
+npm run test:watch    # 监听模式（开发时推荐）
+npm run build:apk     # 一键构建 debug APK（vite build + cap sync + gradlew）
+npx cap sync          # 同步 Web 资源到 Android
+```
+
+---
+
+## 三、完整目录结构
 
 ```
 D:\to-do-list\
-├── CLAUDE.md                          # Claude 技术规范文档
-├── DEVELOPMENT.md                     # 开发阶段指南
-├── HANDOFF.md                         # 本文件 - 交接文档
-├── package.json
-├── vite.config.js                     # Vite 配置（含 base: './'）
-├── capacitor.config.json              # Capacitor 配置
-├── index.html                         # 入口 HTML
+├── .apk-version                        # 当前 APK 版本号（纯文本，当前值: 27）
+├── .gitignore
+├── CLAUDE.md                           # Claude AI 开发规范（设计、TDD、代码风格）
+├── DEVELOPMENT.md                      # 8 阶段开发流程指南（需求→打包）
+├── HANDOFF.md                          # 本文件 - 项目交接文档
+├── README.md                           # 项目简介
+├── WIDGET_DEVELOPMENT.md               # 小组件开发专项文档
+├── capacitor.config.json               # Capacitor 配置（appId, appName, webDir）
+├── index.html                          # Web 入口 HTML
+├── package.json                        # 依赖 + 脚本
+├── vite.config.js                      # Vite 配置（base: './', Vitest 配置）
+│
+├── docs/
+│   ├── requirements.md                 # 需求确认书（2026-07-29）
+│   ├── plan.md                         # 开发计划文档
+│   └── sqlite-storage-plan.md         # v17 SQLite 重构方案
+│
 ├── src/
-│   ├── main.jsx                       # React 入口
-│   ├── App.jsx                        # 主应用组件（生命周期、数据同步）
+│   ├── main.jsx                        # React 入口（挂载 App 到 #root）
+│   ├── setupTests.js                   # Vitest 测试配置（引入 jest-dom）
+│   ├── App.jsx                         # 根组件（生命周期、主题、Toast）
+│   │
 │   ├── components/
-│   │   ├── AddTodo.jsx                # 添加任务表单（含 DateButton）
-│   │   ├── DateButton.jsx             # 日期选择器组件
-│   │   ├── FilterTabs.jsx             # 筛选标签（全部/进行中/已完成）
-│   │   ├── EmptyState.jsx             # 空状态占位
-│   │   ├── TodoList.jsx               # 任务列表（按日期分组）
-│   │   └── TodoItem.jsx               # 单条任务
+│   │   ├── AddTodo.jsx                 # 添加任务表单（forwardRef 支持聚焦）
+│   │   ├── DateButton.jsx              # 日期时间选择器（datetime-local 封装）
+│   │   ├── EmptyState.jsx              # 空状态占位组件
+│   │   ├── FilterTabs.jsx              # 筛选标签（全部/进行中/已完成）
+│   │   ├── ThemeToggle.jsx             # 主题切换按钮（Sun/Moon/System 图标）
+│   │   ├── TodoItem.jsx                # 单条任务（查看态 + 编辑态 + Ripple）
+│   │   ├── TodoList.jsx                # 任务列表（按日期分组 + 组内时间排序）
+│   │   └── __tests__/
+│   │
 │   ├── hooks/
-│   │   └── useTodos.js                # 核心数据管理 Hook
+│   │   ├── useTodos.js                 # 核心数据 Hook（CRUD + 持久化 + 顺延 + 清理）
+│   │   ├── useTheme.js                 # 主题 Hook（三态循环 + 原生同步）
+│   │   └── __tests__/
+│   │
 │   ├── plugins/
-│   │   └── todoStorage.js             # Capacitor 插件桥接
-│   └── styles/
-│       └── index.css                  # Tailwind CSS
-├── android/
-│   └── app/
-│       ├── build.gradle               # Android 构建配置
-│       └── src/main/
-│           ├── AndroidManifest.xml    # 权限声明 + Service 注册
-│           ├── java/com/example/todolist/
-│           │   ├── MainActivity.java
-│           │   ├── TodoStoragePlugin.java  # SharedPreferences 读写插件
-│           │   └── widget/
-│           │       ├── TodoWidgetProvider.java         # 4x2 小组件 Provider
-│           │       ├── TodoWidgetProviderLarge.java     # 4x3 小组件 Provider（子类）
-│           │       ├── TodoWidgetViewsFactory.java      # ListView 数据适配器（v12 新增）
-│           │       ├── TodoWidgetViewsService.java      # RemoteViewsService（v12 新增）
-│           │       └── TodoWidgetRefreshReceiver.java   # 定时刷新广播
-│           └── res/
-│               ├── layout/
-│               │   ├── widget_todo_4x2.xml    # 4x2 小组件布局（ListView）
-│               │   ├── widget_todo_4x3.xml    # 4x3 小组件布局（ListView）
-│               │   └── widget_task_item.xml   # 单条任务行布局
-│               ├── drawable/
-│               │   ├── widget_bg.xml          # 小组件背景
-│               │   ├── ic_widget_add.xml      # 添加按钮图标
-│               │   ├── ic_checkbox_checked.xml    # 已选中复选框
-│               │   ├── ic_checkbox_unchecked.xml  # 未选中复选框
-│               │   ├── ic_clock_12dp.xml          # 时钟图标
-│               │   └── ic_location_12dp.xml       # 位置图标
-│               ├── values/
-│               │   └── widget_colors.xml      # 小组件颜色（含深色模式）
-│               └── xml/
-│                   ├── widget_todo_4x2_info.xml
-│                   └── widget_todo_4x3_info.xml
+│   │   └── todoStorage.js              # Capacitor 插件桥接（含 Web fallback）
+│   │
+│   ├── styles/
+│   │   └── index.css                   # Tailwind CSS 入口（@import tailwindcss + @theme）
+│   │
+│   └── utils/
+│       ├── rolloverOverdue.js          # 过期任务顺延工具函数
+│       └── __tests__/
+│
+└── android/
+    ├── build-debug.bat                 # Windows debug APK 构建脚本
+    ├── build-release.bat               # Windows release APK 构建脚本
+    ├── keystore/
+    │   └── release.keystore            # 签名密钥（⚠️ 不提交 Git，务必备份！）
+    │
+    └── app/src/main/
+        ├── AndroidManifest.xml         # 权限声明 + Service/Receiver 注册
+        │
+        ├── java/com/example/todolist/
+        │   ├── MainActivity.java       # BridgeActivity（back 键 + 深度链接处理）
+        │   ├── TodoStoragePlugin.java  # Capacitor 插件（load/save/theme/focusAdd）
+        │   │
+        │   ├── db/
+        │   │   └── TodoDbHelper.java   # SQLite 单例（建表/索引/迁移/CRUD/小组件查询）
+        │   │
+        │   └── widget/
+        │       ├── TodoWidgetProvider.java       # 4×2 Provider（主逻辑 + 完成动效）
+        │       ├── TodoWidgetProviderLarge.java   # 4×3 Provider（继承 4×2）
+        │       ├── TodoWidgetViewsFactory.java    # ListView RemoteViews 数据适配器
+        │       ├── TodoWidgetViewsService.java    # RemoteViewsService（创建工厂）
+        │       ├── TodoWidgetTheme.java           # 主题适配助手（浅/深色/系统）
+        │       └── TodoWidgetRefreshReceiver.java # 每日 0:00 定时刷新广播接收器
+        │
+        └── res/
+            ├── layout/
+            │   ├── widget_todo_4x2.xml      # 4×2 小组件布局
+            │   ├── widget_todo_4x3.xml      # 4×3 小组件布局
+            │   └── widget_task_item.xml     # 单条任务行（checkbox、时间、地点）
+            ├── drawable/                    # 图标资源（浅/深色各一套）
+            ├── values/
+            │   └── widget_colors.xml        # 小组件颜色定义（含深色模式）
+            └── xml/
+                ├── widget_todo_4x2_info.xml
+                └── widget_todo_4x3_info.xml
 ```
 
 ---
 
-## 三、已解决的问题
+## 四、架构设计
 
-### 3.1 APK 崩溃问题（v1-v6）
+### 4.1 整体架构图
 
-| 版本 | 问题 | 解决方案 |
-|------|------|---------|
-| v1-v3 | 缺少依赖/配置错误 | 修复 Capacitor 配置 |
-| v4 | 插件注册方式错误 | 改用 `initialPlugins` 注册 |
-| v5 | `colors.xml` 缺失 | 补充颜色资源文件 |
-| v6 | WebView 加载失败 | 未解决（v7 修复路径问题） |
+```
+┌──────────────────────────────────────────────┐
+│           React Web App（Vite）               │
+│                                              │
+│  App.jsx                                     │
+│  ├── useTodos Hook ──→ TodoStorage.load/save │
+│  ├── useTheme Hook ──→ TodoStorage.setTheme  │
+│  ├── TodoList → TodoItem（查看/编辑）         │
+│  └── AddTodo（forwardRef 支持深度链接聚焦）   │
+└─────────────────┬────────────────────────────┘
+                  │ Capacitor Bridge（JSI/WebView）
+┌─────────────────▼────────────────────────────┐
+│         TodoStoragePlugin（Java）             │
+│  load()           → TodoDbHelper.getAllActiveTodosJson() │
+│  save()           → TodoDbHelper.syncTodos() + refreshAllWidgets() │
+│  setThemeMode()   → SharedPrefs + refreshAllWidgets() │
+│  getAndClearFocusAdd() → SharedPrefs 一次性消费 │
+└─────────────────┬────────────────────────────┘
+                  │
+┌─────────────────▼────────────────────────────┐
+│           TodoDbHelper（SQLite 单例）          │
+│  数据库文件：todos.db                         │
+│  表：todos（12 列 + 2 复合索引）              │
+│  checkAndMigrateFromSharedPrefs() — 一次性迁移 │
+│  getAllActiveTodosJson()                       │
+│  syncTodos()（全量 UPSERT + 清理）             │
+│  setTodoCompleted()（小组件专用）              │
+│  getTodayActiveTodosForWidget()               │
+└─────────────────┬────────────────────────────┘
+                  │
+┌─────────────────▼────────────────────────────┐
+│        Android Widget System                  │
+│  refreshAllWidgets()                          │
+│  └── updateWidget(id)                         │
+│       ├── setRemoteAdapter（绑定 ListView）    │
+│       ├── setPendingIntentTemplate（点击模板） │
+│       └── notifyAppWidgetViewDataChanged()    │
+│            → TodoWidgetViewsFactory           │
+│               └── getViewAt() per row         │
+│                   ├── SQLite 直查今日任务      │
+│                   ├── TodoWidgetTheme（主题）  │
+│                   └── completingRows（动效）   │
+└──────────────────────────────────────────────┘
+```
 
-### 3.2 资源路径问题（v7）
+### 4.2 数据写入流
 
-**问题**: Vite 构建输出的资源路径为绝对路径 `/assets/xxx.js`，Capacitor 8 把文件放在 `assets/public/` 子目录，导致 WebView 找不到资源。
+```
+用户操作（添加/切换/删除）
+  → React setState（乐观更新，立即生效）
+  → useEffect 触发 saveTodosAsync()
+  → TodoStorage.save({ data: JSON.stringify(todos) })
+  → TodoStoragePlugin.save() → TodoDbHelper.syncTodos()
+  → TodoWidgetProvider.refreshAllWidgets()（小组件同步刷新）
+```
 
-**解决**: 在 `vite.config.js` 中添加 `base: './'` 使用相对路径。
+### 4.3 主题系统流
 
-### 3.3 debuggable 启动卡死（v7）
-
-**问题**: debug 版本默认 `debuggable = true`，导致小米设备启动时等待调试器。
-
-**解决**: 在 `build.gradle` 的 `debug` buildType 中添加 `debuggable false`。
-
-### 3.4 精确闹钟权限崩溃（v7）
-
-**问题**: Android 12+ 要求 `SCHEDULE_EXACT_ALARM` 权限才能设置精确闹钟。
-
-**解决**:
-1. 在 `AndroidManifest.xml` 中添加权限声明
-2. 在 `MainActivity.java` 中用 try-catch 保护 `scheduleNextAlarm()` 调用
-
-### 3.5 小米 Launcher 小组件崩溃（v8）
-
-**问题**: 小米桌面（MIUI Launcher）把标准 `CheckBox` 替换成了自己的 `HomeMIUIWidgetCheckBox`，不支持 RemoteViews 的 `setChecked()` 方法。
-
-**解决**:
-1. 将 `CheckBox` 改为 `ImageView`
-2. 使用两个不同的 drawable 图片切换状态（`ic_checkbox_checked.xml` / `ic_checkbox_unchecked.xml`）
-3. 在 Java 代码中用 `setImageViewResource()` 代替 `setBoolean("setChecked")`
-
-### 3.6 refreshAllWidgets 访问权限（v8）
-
-**问题**: `refreshAllWidgets()` 方法是 package-private，`TodoStoragePlugin` 在另一个包中无法访问。
-
-**解决**: 改为 `public static`。
-
-### 3.7 dueAt 解析问题（v8）
-
-**问题**: Web 端 `datetime-local` 输入框返回 ISO 格式 `"2026-07-30T10:30"`（不带秒），Java 端解析格式不匹配。
-
-**解决**: 支持两种格式：
-- 不带秒: `"yyyy-MM-dd'T'HH:mm"`
-- 带秒: `"yyyy-MM-dd'T'HH:mm:ss"`
-
-### 3.8 小组件不显示任务（v8）
-
-**问题**: `dueAt` 字段为 null 时任务被过滤掉。
-
-**解决**: 如果没有设置 `dueAt`，使用 `createdAt` 作为默认值（注意：用户后来要求恢复为"没有时间的任务不显示"）。
-
-### 3.9 小组件无法滚动（v12）
-
-**问题**: 小组件使用 `LinearLayout` + `addView()` 显示任务，无法滚动，超出可视区域的任务被直接裁切。
-
-**解决**:
-1. 将 `LinearLayout` 替换为 `ListView`
-2. 新增 `TodoWidgetViewsFactory`（RemoteViewsFactory 实现）
-3. 新增 `TodoWidgetViewsService`（RemoteViewsService）
-4. Provider 改用 `setRemoteAdapter()` 绑定 ListView
-
-### 3.10 小组件 checkbox 点击失效（v12）
-
-**问题**: ListView 中的 `setOnClickPendingIntent` 不可靠，点击无响应。
-
-**解决**: 改用 `setPendingIntentTemplate` + `setFillInIntent` 标准模式：
-- Provider 设置模板 PendingIntent（显式 Intent + FLAG_IMMUTABLE）
-- Factory 通过 `setOnClickFillInIntent` 携带 todo_id
-
-### 3.11 Android 14+ PendingIntent 崩溃（v12）
-
-**问题**: `setPendingIntentTemplate` 使用隐式 Intent + `FLAG_MUTABLE`，Android 14（API 34）禁止此组合，导致崩溃。崩溃发生在 `TodoStoragePlugin.save()` → `refreshAllWidgets()` → `updateWidget()` 时，每次保存数据都会崩溃。
-
-**解决**:
-1. 改为**显式 Intent**（设置 ComponentName + Package）
-2. 使用 `FLAG_IMMUTABLE` 替代 `FLAG_MUTABLE`
+```
+useTheme Hook（三态循环：system → light → dark → system）
+  → TodoStorage.setThemeMode({ themeMode })
+  → SharedPrefs 持久化 "theme_mode"
+  → TodoWidgetProvider.refreshAllWidgets()
+     → TodoWidgetTheme.applyThemeToWidget()
+        → 读 SharedPrefs + 系统 UI Mode → 选择配色方案
+```
 
 ---
 
-## 四、当前状态（v15）
+## 五、核心模块详解
 
-### 4.1 已完成的功能
+### 5.1 `App.jsx` — 根组件
 
-| 功能 | 状态 |
+**职责**：
+- 组装所有子组件，处理全局生命周期
+- 监听 `appStateChange`：回到前台时调用 `resyncFromNative()` 全量重载（处理小组件操作导致的数据变化）
+- 0:00 跨天定时器：重置日期分组 key + 调用 `rolloverOverdueTodos()`
+- 冷启动检查 `focus_add` 标记（小组件「+」按钮深度链接到输入框）
+- 管理 Toast：清除已完成撤销（可撤销）+ 顺延通知（不可撤销），3 秒自动消失
+
+### 5.2 `useTodos.js` — 核心数据 Hook
+
+| 方法 | 说明 |
 |------|------|
-| 任务 CRUD | ✅ 完成 |
-| 数据持久化（原生 SQLite + 存量迁移） | ✅ 完成（v17 升级） |
-| 桌面小组件（4x2 + 4x3） | ✅ 完成 |
-| 小组件滚动浏览 | ✅ 完成（v12） |
-| 小组件 checkbox 标记完成 | ✅ 完成（v12 修复） |
-| 小组件每日午夜刷新 | ✅ 完成 |
-| 按日期分组显示 | ✅ 完成 |
-| 自动清理 30 天以上已完成任务 | ✅ 完成 |
-| Android 14+ 兼容性 | ✅ 完成（v12 修复） |
-| 底部导航栏固定 | ✅ 完成（v15） |
-| 任务按时间排序 | ✅ 完成（v15） |
+| `addTodo({ text, dueAt, location })` | 添加任务，生成 UUID，prepend 到列表头部 |
+| `toggleTodo(id)` | 切换完成状态，记录 `completedAt` |
+| `updateTodo({ id, text, dueAt, location, notes, priority })` | 就地编辑 |
+| `deleteTodo(id)` | 从列表过滤移除（硬删，不软删） |
+| `clearCompleted()` | 清除所有已完成，返回被删任务（供撤销） |
+| `restoreTodos(restored)` | 撤销清除，prepend 回列表 |
+| `rolloverOverdueTodos()` | 顺延过期未完成任务的 dueAt 到今天（保留时间） |
+| `resyncFromNative()` | 回到前台时从 SQLite 全量重载（处理小组件修改） |
 
-### 4.2 待优化
+**启动时序**：
+1. `loadTodosAsync()` → 优先读 SQLite（含存量迁移检查），fallback localStorage
+2. `autoClean()` → 过滤 30 天以上已完成任务
+3. `rolloverOverdue()` → 顺延过期未完成任务
+4. `setTodos()` → 触发渲染
 
-- 小组件排版可能需要根据用户反馈微调
-- 深色模式适配（小组件已支持，App 侧待实现）
-- 拖拽排序任务
-- 正式发布签名配置（keystore）
+### 5.3 `todoStorage.js` — Capacitor 插件桥接
 
----
+| JS 方法 | 原生实现 | Web fallback |
+|---------|----------|-------------|
+| `load()` | `TodoDbHelper.getAllActiveTodosJson()` | `localStorage.getItem('todos')` |
+| `save({ data })` | `TodoDbHelper.syncTodos()` | `localStorage.setItem('todos', data)` |
+| `setThemeMode({ themeMode })` | SharedPrefs + `refreshAllWidgets()` | `localStorage.setItem('theme_mode', ...)` |
+| `getThemeMode()` | SharedPrefs 读取 | `localStorage.getItem('theme_mode')` |
+| `getAndClearFocusAdd()` | SharedPrefs 一次性消费 | `return { focus: false }` |
 
-## 五、版本更新历史
+### 5.4 `TodoDbHelper.java` — SQLite 单例
 
-### 5.1 v21 更新内容（2026-08-22，编辑触发防误触优化）
+**数据库路径**：`/data/data/com.example.todolist/todos.db`
 
-**问题**: 点击文字区域也会触发编辑模式，在移动端滑动列表或点击查看时极易误触，影响日常使用体验。
+**建表 SQL**：
 
-**解决**:
-- 取消文字区域的点击编辑绑定，仅当用户明确点击右侧专属的 **「编辑（铅笔）」按钮** 时才激活编辑模式，彻底杜绝列表滑动或浏览时的误触。
+```sql
+CREATE TABLE todos (
+  id           TEXT PRIMARY KEY,
+  text         TEXT NOT NULL,
+  completed    INTEGER NOT NULL DEFAULT 0,
+  completed_at INTEGER,
+  created_at   INTEGER NOT NULL,
+  updated_at   INTEGER NOT NULL,
+  due_at       TEXT,           -- ISO "2026-07-30T10:30"（无秒）
+  location     TEXT,
+  category     TEXT,           -- 预留（未使用）
+  priority     INTEGER NOT NULL DEFAULT 0,  -- 预留（未使用）
+  notes        TEXT,           -- 预留（未使用）
+  deleted_at   INTEGER         -- 预留（软删未落地）
+);
+-- 加速小组件查询的复合索引
+CREATE INDEX idx_todos_active_due ON todos (completed, due_at, deleted_at);
+CREATE INDEX idx_todos_created ON todos (created_at DESC);
+```
 
-### 5.2 v20 更新内容（2026-08-22，卡片垂直居中对齐与舒展排版优化）
+**核心方法**：
+- `checkAndMigrateFromSharedPrefs()` — 冷启动时一次性迁移旧数据，通过 `migrated_to_sqlite_v1` flag 防重复
+- `syncTodos(JSONArray)` — 全量 UPSERT（`CONFLICT_REPLACE`）+ 删除不在列表中的记录（事务保护）
+- `getTodayActiveTodosForWidget(todayStart, todayEnd, completingIds)` — 小组件专用，返回今日未完成任务，按时间升序
 
-**问题**: 编辑与删除按钮偏向顶部，按键偏小；待办文字与复选框过于紧贴蜷缩在左侧，视觉重心左倾显得臃肿。
-
-**解决**:
-1. **全卡片上下居中对齐**：使用 `items-center` 与 `self-center`，使复选框、文本内容及右侧编辑/删除按钮在上下边框的正中间对齐。
-2. **操作按钮调大与触控优化**：图标放大至 18px，触控区域设为 40×40px，居中常驻微显，交互轻快和谐。
-3. **左右平衡通透排版**：复选框与文字间距扩大至 `gap-4`，主文字 `leading-relaxed` 充分舒展，消除左侧蜷缩臃肿感。
-
-### 5.3 v19 更新内容（2026-08-22，长文字自动折行优化）
-
-**问题**: 之前单条任务文字过长时，App 页面使用了 `truncate` 导致单行截断，桌面小组件限制了 `maxLines="1"`，长文本无法完整阅读。
-
-**解决**:
-1. **App 页面**：移除 `truncate` 截断限制，采用 `break-words` 自然换行，长文本 100% 完整显示。
-2. **桌面小组件**：将 `widget_task_item.xml` 中的 `maxLines` 从 1 提升至 3 行（配合 ListView 垂直滚动），长待办清晰完整呈现。
-
-### 5.3 v18 更新内容（2026-08-22，任务点击就地编辑）
-
-**功能**: 支持点击任务文字或右侧铅笔图标进入就地编辑模式，可修改任务文字、截止时间与地点，支持回车保存与 Esc 取消。
-
-### 5.4 v17 更新内容（2026-08-22，SQLite 高容量存储重构）
-
-**问题**: 原有存储采用 SharedPreferences 存单一大 JSON 字符串，容量受限于 XML 文件与 IPC 限制（仅能支撑数百条），且每次读写小组件均需全量序列化/反序列化 JSON，无法支撑长期大量任务。
-
-**解决**:
-1. **引入 Android 原生 SQLite (`TodoDbHelper.java`)**：创建 `todos.db` 数据库与复合索引 `(completed, due_at, deleted_at)`。
-2. **扩展数据 Schema**：支持 `priority`, `notes`, `updated_at`, `deleted_at` 等高容量字段。
-3. **存量数据自动平滑迁移**：冷启动时自动检测 SharedPreferences 旧数据，事务批量导入 SQLite，老用户升级数据零丢失。
-4. **小组件原生 SQL 直查**：小组件直接通过索引毫秒级查询今日活跃待办，彻底告别 JSON 转换瓶颈。
-5. **容量突破**：存储上限提升至数十万至百万级，支持多年历史沉淀与极速检索。
-
-### 5.2 v15 更新内容（2026-08-01）
-
-**问题**: 添加按钮和筛选标签（全部/进行中/已完成）随任务列表一起滚动，任务多时用户需要滚动到底部才能找到添加按钮。
-
-**解决**: 将 `TodoList` 拆分为上下两部分布局：
-- 上部分：任务列表区域（`flex-1 overflow-y-auto`），可独立滚动
-- 下部分：底部导航区（`shrink-0`），始终固定在屏幕底部
-
-### 5.3 任务按时间排序（v15）
-
-**问题**: 任务列表按日期分组后，组内任务保持创建顺序，未按截止时间排列。
-
-**解决**: 在 `TodoList.jsx` 中对每组任务排序：
-- 无 `dueAt` 的任务排在最前
-- 有 `dueAt` 的任务按截止时间（`dueAt`）升序排列
-
----
-
-## 六、关键代码位置
-
-### 6.1 数据模型
+### 5.5 数据模型（JS 端完整结构）
 
 ```javascript
-// src/hooks/useTodos.js
-const newTodo = {
-  id: generateId(),           // 唯一 ID
-  text: trimmed,              // 任务内容
-  completed: false,           // 是否完成
-  completedAt: null,          // 完成时间戳
-  category: null,             // 分类（未使用）
-  createdAt: Date.now(),      // 创建时间戳
-  dueAt: dueAt || null,       // 截止时间（ISO 格式字符串 "2026-07-30T10:30" 或 null）
-  location: location?.trim() || null,  // 地点
-};
-```
-
-### 6.2 SharedPreferences 数据存储
-
-```java
-// TodoStoragePlugin.java
-// 数据存储在: /data/data/com.example.todolist/shared_prefs/todo_prefs.xml
-// Key: "todos_json"
-// Value: JSON 数组字符串
-```
-
-### 6.3 小组件数据过滤逻辑
-
-```java
-// TodoWidgetProvider.java → loadTodayTodos()
-// TodoWidgetViewsFactory.java → loadTodayTodos()（同逻辑）
-// 过滤条件：
-// 1. dueAt 存在且不为 null
-// 2. dueAt 在今天 0:00 ~ 明天 0:00 之间
-// 3. completed == false（未完成）
-// 排序：按 dueAt 升序
-```
-
-### 6.4 小组件架构（v12）
-
-```
-TodoWidgetProvider.updateWidget()
-  → setRemoteAdapter(R.id.widget_task_container, serviceIntent)  // 绑定 ListView
-  → setPendingIntentTemplate(...)                                 // 点击模板（显式 Intent）
-  → notifyAppWidgetViewDataChanged()                              // 触发数据刷新
-
-TodoWidgetViewsService.onGetViewFactory()
-  → 返回 TodoWidgetViewsFactory 实例
-
-TodoWidgetViewsFactory.getViewAt(position)
-  → 创建 RemoteViews（widget_task_item.xml）
-  → setOnClickFillInIntent(root, intent)  // 携带 todo_id
-```
-
-### 6.5 小组件刷新机制
-
-```java
-// TodoWidgetRefreshReceiver.java
-// 每日 0:00 定时刷新（AlarmManager.setExactAndAllowWhileIdle）
-// 调用: TodoWidgetProvider.refreshAllWidgets(context)
-```
-
-### 6.6 Vite 配置（重要）
-
-```javascript
-// vite.config.js
-export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  base: './',  // 关键：使用相对路径，否则 Capacitor 8 找不到资源
-});
-```
-
-### 6.7 Android 构建配置
-
-```groovy
-// android/app/build.gradle
-android {
-    buildTypes {
-        debug {
-            debuggable false  // 关键：避免小米设备启动卡死
-        }
-        release {
-            minifyEnabled false
-        }
-    }
+{
+  id: string,            // crypto.randomUUID() 或时间戳 fallback
+  text: string,          // 任务内容
+  completed: boolean,    // 是否完成
+  completedAt: number | null, // 完成时间戳（ms）
+  createdAt: number,     // 创建时间戳（ms）
+  updatedAt: number,     // 最后修改时间戳（ms）
+  dueAt: string | null,  // 截止时间 ISO "2026-07-30T10:30"
+  location: string | null, // 地点
+  category: null,        // 预留字段（当前未使用）
+  priority: 0,           // 预留字段（当前未使用，整数）
+  notes: null,           // 预留字段（当前未使用）
+  deletedAt: null,       // 预留字段（软删除尚未落地）
 }
 ```
 
 ---
 
-## 七、已知陷阱和注意事项
+## 六、数据流与存储
 
-### 7.1 小米设备特殊处理
+### 6.1 存储层次
 
-1. **CheckBox 不兼容**: 小米 Launcher 替换了标准 CheckBox，必须用 ImageView + drawable 切换
-2. **debuggable 启动卡死**: debug 版本必须设置 `debuggable false`
-3. **精确闹钟权限**: Android 12+ 需要 `SCHEDULE_EXACT_ALARM` 权限，且需要 try-catch 保护
+```
+SQLite (todos.db)              ← 主存储（v17 起），支持百万级记录
+  │ 一次性迁移（冷启动检测）
+SharedPreferences (todo_prefs.xml)
+  ├── focus_add (boolean)       ← 小组件「+」触发聚焦标记（一次性消费）
+  ├── theme_mode (string)       ← 主题模式（system/light/dark）
+  └── migrated_to_sqlite_v1 (bool) ← 迁移完成标记，防重复
+  │ Web 环境 fallback
+localStorage (浏览器)           ← 开发环境调试用
+```
 
-### 7.2 Capacitor 8 路径问题
+### 6.2 dueAt 时间格式规范
 
-- Vite 构建输出路径为绝对路径 `/assets/xxx.js`
-- Capacitor 8 把文件放在 `assets/public/` 子目录
-- 必须在 `vite.config.js` 中设置 `base: './'`
+> **重要**：前端存储为 `"YYYY-MM-DDTHH:mm"`（无秒），Java 端兼容解析：
 
-### 7.3 Android 14+ PendingIntent 限制（v12 新增）
+```java
+// TodoDbHelper.parseDueAtStr()
+if (str.split(":").length == 2) {   // HH:mm → 无秒格式
+    sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm", ...);
+} else {                             // HH:mm:ss → 有秒格式
+    sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", ...);
+}
+```
 
-- **禁止**: 隐式 Intent + `FLAG_MUTABLE`
-- **必须**: 显式 Intent（设置 ComponentName + Package）+ `FLAG_IMMUTABLE`
-- 崩溃发生在 `PendingIntent.getBroadcast()` 调用处
+### 6.3 小组件与 App 数据同步
 
-### 7.4 ListView + RemoteViewsFactory 注意事项
+**设计原则**：小组件直接读写 SQLite，不经过 JS 层。
 
-- `setOnClickPendingIntent` 在 ListView 行中**不可靠**
-- **必须**使用 `setPendingIntentTemplate` + `setFillInIntent` 模式
-- `setFillInIntent` 需要目标视图设置 `focusable="true"` 和 `clickable="true"`
-- 根视图需要有 `android:id`（如 `widget_task_item_root`）
+- **App → 小组件**：`saveTodosAsync()` → `syncTodos()` → `refreshAllWidgets()`（自动）
+- **小组件 → App**：小组件标记完成 → 直接更新 SQLite → App 回到前台 → `appStateChange` → `resyncFromNative()`（全量重载）
 
-### 7.5 数据格式
+---
 
-- `dueAt` 在 Web 端存储为 ISO 格式字符串 `"2026-07-30T10:30"`
-- `createdAt` 存储为时间戳数字 `1753881600000`
-- SharedPreferences 中存储为 JSON 数组字符串
+## 七、Android 小组件系统
 
-### 7.6 ADB 调试
+### 7.1 完整调用链
+
+```
+用户在 App 内操作
+  → TodoStoragePlugin.save()
+  → refreshAllWidgets()
+  → updateWidget(widgetId)
+      ├── setRemoteAdapter(ListView, ServiceIntent)
+      ├── setPendingIntentTemplate(ClickTemplate)
+      ├── applyThemeToWidget()
+      └── notifyAppWidgetViewDataChanged()
+           → TodoWidgetViewsFactory.onDataSetChanged()
+           → loadTodayTodos()（SQLite 直查）
+           → getViewAt(position)
+               ├── 渲染文字/时间/地点
+               ├── applyThemeToTaskItem()（主题+动效 alpha）
+               └── setOnClickFillInIntent（携带 todo_id）
+```
+
+### 7.2 完成动效（3 帧淡出）
+
+```java
+// TodoWidgetProvider.completingRows: ConcurrentHashMap<String id, Float alpha>
+// 帧1 (0ms)   alpha=1.0f → 任务仍在列表，显示绿色 checkbox
+// 帧2 (150ms) alpha=0.45f → 半透明
+// 帧3 (280ms) alpha=0.12f → 几乎不可见
+// 移除(380ms) completingRows.remove(id) → refreshAllWidgets() → 任务消失
+```
+
+### 7.3 点击事件（Android 14+ 合规方案）
+
+```java
+// Provider：FLAG_MUTABLE（模板需要 fillIn 合并 extras）
+Intent templateIntent = new Intent(context, TodoWidgetProvider.class);
+templateIntent.setAction(ACTION_COMPLETE);
+templateIntent.setPackage(context.getPackageName());  // 显式 Intent
+views.setPendingIntentTemplate(R.id.widget_task_container,
+    PendingIntent.getBroadcast(context, 0, templateIntent,
+        FLAG_UPDATE_CURRENT | FLAG_MUTABLE));
+
+// Factory getViewAt()：checkbox 和根视图都需要单独设置 fillInIntent
+Intent fillInIntent = new Intent();
+fillInIntent.putExtra("todo_id", item.id);
+v.setOnClickFillInIntent(R.id.widget_task_item_root, fillInIntent);
+v.setOnClickFillInIntent(R.id.task_checkbox, fillInIntent);  // ← 缺少会导致 checkbox 点击失效
+```
+
+### 7.4 每日 0:00 自动刷新
+
+```java
+// TodoWidgetRefreshReceiver
+// AlarmManager.setExactAndAllowWhileIdle()（穿透 Doze 模式）
+// 触发时间：每日 0:00 + 5 秒缓冲
+// 触发后：refreshAllWidgets()
+// 权限要求：AndroidManifest 声明 SCHEDULE_EXACT_ALARM，代码用 try-catch 保护
+```
+
+### 7.5 主题系统
+
+```java
+// TodoWidgetTheme.isDarkMode()
+// "dark"   → 强制深色
+// "light"  → 强制浅色
+// "system" → 读取 Configuration.UI_MODE_NIGHT_MASK
+
+// 浅色：背景 widget_bg_light，主文字 #2F3437，次要文字 #78716C
+// 深色：背景 widget_bg_dark，主文字 #F4F4F5，次要文字 #A1A1AA
+```
+
+---
+
+## 八、已解决的技术难题
+
+### 8.1 Vite + Capacitor 8 白屏问题
+
+- **症状**：APK 安装后白屏
+- **根因**：Vite 默认绝对路径 `/assets/xxx.js`，Capacitor 8 将文件放在 `assets/public/` 子目录，路径不匹配
+- **解决**：`vite.config.js` 添加 `base: './'`
+
+### 8.2 小米设备启动卡死
+
+- **症状**：debug APK 安装后 App 长时间黑屏
+- **根因**：debug buildType 默认 `debuggable = true`，MIUI 会等待调试器连接
+- **解决**：`android/app/build.gradle` 中 `debug { debuggable false }`
+
+### 8.3 小米 Launcher 不兼容标准 CheckBox
+
+- **症状**：小组件崩溃
+- **根因**：MIUI Launcher 将 CheckBox 替换为私有 `HomeMIUIWidgetCheckBox`，不支持 `setChecked()`
+- **解决**：改用 `ImageView` + 两套 drawable 切换（`ic_checkbox_checked` / `ic_checkbox_unchecked_light/_dark`）
+
+### 8.4 Android 14+ PendingIntent 崩溃
+
+- **症状**：小组件 checkbox 点击崩溃
+- **根因**：API 34 禁止「隐式 Intent + FLAG_MUTABLE」组合
+- **解决**：模板 PendingIntent 使用显式 Intent（含 `setPackage()`）+ `FLAG_MUTABLE`；不需要 fillIn 的用 `FLAG_IMMUTABLE`
+
+### 8.5 ListView 中 setOnClickPendingIntent 失效
+
+- **症状**：小组件任务行点击无响应
+- **根因**：`setOnClickPendingIntent` 在 ListView item 中不可靠（RemoteViews 限制）
+- **解决**：标准模式：`setPendingIntentTemplate` + `setOnClickFillInIntent`（checkbox 和根视图均需设置）
+
+### 8.6 SharedPreferences → SQLite 存量迁移（v17）
+
+- **背景**：SharedPreferences 存单一大 JSON，IPC 限制下容量不足
+- **迁移策略**：
+  1. 冷启动检查 `migrated_to_sqlite_v1` 标记
+  2. 未迁移则从 SharedPrefs 读旧 JSON → 批量事务 UPSERT 到 SQLite
+  3. 写入迁移标记，之后永远不再执行
+- **保障**：容量从数百条扩展至百万级，老用户数据零丢失
+
+### 8.7 精确闹钟权限崩溃（Android 12+）
+
+- **解决**：`AndroidManifest.xml` 声明 `SCHEDULE_EXACT_ALARM`，调用处加 `try-catch (SecurityException)`
+
+---
+
+## 九、版本更新历史
+
+| 版本 | 时间 | 核心变更 |
+|------|------|---------|
+| v1~v6 | 早期 | APK 崩溃修复（Capacitor 配置/依赖/颜色资源） |
+| v7 | — | Vite `base: './'`；`debuggable false`；精确闹钟权限 |
+| v8 | — | 小米 CheckBox 兼容；`refreshAllWidgets` 改为 public static；dueAt 双格式解析 |
+| v12 | — | 小组件 ListView 滚动（RemoteViewsFactory）；checkbox 点击修复；Android 14+ PendingIntent 合规 |
+| v14 | — | 签名密钥统一（覆盖安装保留数据） |
+| v15 | 2026-08-01 | 底部导航栏固定；组内按截止时间升序 |
+| v17 | 2026-08-22 | SQLite 重构（TodoDbHelper 单例）；存量自动迁移；容量突破 |
+| v18 | 2026-08-22 | 任务就地编辑（铅笔按钮） |
+| v19 | 2026-08-22 | 长文字折行（App 移除 truncate；小组件 maxLines=3） |
+| v20 | 2026-08-22 | 卡片垂直居中；操作按钮 40×40px 触控区 |
+| v21 | 2026-08-22 | 编辑防误触（文字区域不再触发编辑，仅铅笔按钮） |
+| v22+ | — | 深色模式（App + 小组件联动）；三态主题；小组件完成淡出动效 |
+| v27 | 当前 | 最新版本 |
+
+---
+
+## 十、已知问题与待优化
+
+### 10.1 功能缺口
+
+| 功能 | 优先级 | 说明 |
+|------|--------|------|
+| 任务拖拽排序 | P1 | 可用 `dnd-kit`，需新增 `order` 字段 |
+| 小组件任务行点击打开 App 对应任务 | P1 | 需 Deep Link（intent-filter + hash 参数滚动定位） |
+| 备注字段（notes）UI | P2 | 数据模型和 `updateTodo` API 已支持，差编辑/显示 UI |
+| 优先级（priority）UI | P2 | 数据模型已有字段，未使用 |
+| 软删除真正落地 | P2 | `deleted_at` 字段已存在，JS 端 `deleteTodo` 仍为硬删 |
+| 任务提醒通知 | P2 | 需 `@capacitor/local-notifications` |
+| 任务分类/标签 | P2 | 数据模型已预留 `category` 字段 |
+
+### 10.2 代码质量问题
+
+| 问题 | 位置 | 建议 |
+|------|------|------|
+| 测试覆盖不足 | `__tests__/` 较稀少 | 补充 TodoItem、TodoList、AddTodo 的组件测试 |
+| `loadTodayTodos` 逻辑重复 | `TodoWidgetProvider` + `TodoWidgetViewsFactory` | Provider 中的那份可删除，统一由 Factory 加载 |
+| `clearCompleted` stale closure | `useTodos.js:176` | 可改用 `useRef` 规避 |
+| `CLAUDE.md` 数据存储说明过时 | `CLAUDE.md:20` | 仍写 localStorage，应更新为 SQLite |
+
+### 10.3 性能注意事项
+
+- `syncTodos()` 每次保存执行全量 UPSERT + 删除，任务量大（1000+）时可改为增量同步
+- 静态 `completingRows` Map 在进程重启后会清空（无副作用，属于正常行为）
+
+---
+
+## 十一、构建与发布流程
+
+### 11.1 日常开发循环
 
 ```bash
-# ADB 路径
+# 前端开发
+npm run dev
+
+# 提交前跑测试
+npm run test
+
+# 构建并同步到 Android
+npm run build && npx cap sync
+
+# 安装到设备
+adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+adb shell am start -n com.example.todolist/.MainActivity
+```
+
+### 11.2 一键构建 debug APK
+
+```bash
+npm run build:apk
+# 等价于: vite build && npx cap sync android && android\build-debug.bat
+```
+
+### 11.3 release APK 构建
+
+```bash
+# Windows（在项目根目录）
+set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
+cd android
+gradlew assembleRelease
+# 产物：android/app/build/outputs/apk/release/app-release.apk
+```
+
+### 11.4 发布到 GitHub
+
+```bash
+# 1. 递增版本号
+echo 28 > .apk-version
+
+# 2. 提交代码
+git add -A
+git commit -m "feat: v28 - 功能描述"
+git push origin master
+
+# 3. 构建 release APK
+cd android && gradlew assembleRelease
+
+# 4. 创建 GitHub Release
+gh release create v28 android/app/build/outputs/apk/release/app-release.apk \
+  --title "v28 - 标题" \
+  --notes "发布说明"
+```
+
+### 11.5 ⚠️ 签名密钥规范（极其重要）
+
+| 项目 | 说明 |
+|------|------|
+| 密钥文件 | `android/keystore/release.keystore` |
+| Git 状态 | **不提交**（已在 `.gitignore`） |
+| 重要性 | 所有构建均使用此密钥，签名变更 = 覆盖安装失败 = 用户数据断层 |
+| 换电脑 | 必须手动拷贝密钥文件，否则新签名无法升级旧版 |
+| 备份 | **请务必备份到网盘/安全位置，密钥丢失无法恢复** |
+| 密钥信息 | alias: `androiddebugkey`，口令: `android` |
+
+### 11.6 升级数据验证（每次发布前必做）
+
+```bash
+# 手机有旧版和任务数据 → 覆盖安装新版 → 确认数据完整
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+adb shell am start -n com.example.todolist/.MainActivity
+```
+
+---
+
+## 十二、调试手册
+
+### 12.1 ADB 常用命令
+
+```bash
+# ADB 路径（本机）
 C:\Users\long\AppData\Local\Android\Sdk\platform-tools\adb.exe
 
 # 安装 APK
-adb install -r D:\to-do-list\android\app\build\outputs\apk\debug\app-debug.apk
+adb install -r <apk路径>
 
 # 启动 App
 adb shell am start -n com.example.todolist/.MainActivity
@@ -417,132 +668,187 @@ adb shell am start -n com.example.todolist/.MainActivity
 # 查看崩溃日志
 adb logcat -d | grep -E "(FATAL|AndroidRuntime|Exception)" | grep -v "libsensor"
 
-# 查看进程
+# 实时查看 App 日志（Tag 过滤）
+adb logcat -s TodoWidget TodoDbHelper TodoStorage
+
+# 查看进程 PID
 adb shell pidof com.example.todolist
+
+# 强制停止 App（重现冷启动场景）
+adb shell am force-stop com.example.todolist
 ```
 
-### 7.7 Gradle 构建
+### 12.2 SQLite 数据检查
 
 ```bash
-cd D:\to-do-list\android
-JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
-JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew installDebug
+# 进入设备 Shell（需 debuggable 版本或 root）
+adb shell
+run-as com.example.todolist
+sqlite3 databases/todos.db
+
+# 常用查询
+SELECT id, text, completed, due_at, deleted_at FROM todos ORDER BY created_at DESC LIMIT 20;
+SELECT COUNT(*) FROM todos WHERE deleted_at IS NULL AND completed = 0;
+SELECT COUNT(*) FROM todos;  -- 总记录数（含已删）
 ```
 
----
+### 12.3 问题排查对照表
 
-## 八、后续待办
+| 症状 | 排查方向 |
+|------|---------|
+| APK 安装后白屏 | `vite.config.js` 是否有 `base: './'` |
+| 小米设备启动卡死 | `build.gradle` 的 `debug { debuggable false }` |
+| 小组件不显示任务 | 任务是否有 `dueAt` 且在今天；SQLite 数据是否正确 |
+| 小组件点击无响应 | `setPendingIntentTemplate` + `setOnClickFillInIntent` 是否均配置（含 checkbox） |
+| 安装后立即崩溃 | `adb logcat` 查 `AndroidRuntime`，定位具体行号 |
+| 升级后数据丢失 | 签名密钥是否一致（`release.keystore`） |
+| 小组件不更新 | `refreshAllWidgets()` 是否被调用；精确闹钟权限是否已授予 |
+| 主题不同步 | SharedPrefs `theme_mode` 是否正确写入；小组件是否触发了 `refreshAllWidgets()` |
 
-### 8.1 功能完善
-
-1. **拖拽排序**: 可考虑 dnd-kit 或 react-beautiful-dnd
-2. **小部件点击交互**: 点击任务行打开 App 对应任务
-3. **深色模式**: App 侧适配（小部件已支持 widget_colors.xml 深色模式）
-4. ~~**正式发布签名**~~: ✅ 已在 v14 完成（统一签名，升级不丢数据）
-
-### 8.2 代码质量
-
-1. **单元测试**: 使用 Vitest 编写前端测试
-2. **代码审查**: 检查安全性和性能
-3. **文档完善**: 更新 README.md
-
----
-
-## 九、构建和部署流程
-
-### 9.1 开发环境
+### 12.4 Gradle 构建（Windows）
 
 ```bash
-# 安装依赖
-npm install
-
-# 启动开发服务器
-npm run dev
-
-# 构建前端
-npm run build
-```
-
-### 9.2 Android 构建
-
-```bash
-# 同步 Web 资源到 Android
-npx cap sync
-
-# 构建 debug APK
+set JAVA_HOME=C:\Program Files\Android\Android Studio\jbr
 cd android
-JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleDebug
-```
 
-### 9.3 部署到设备
+# debug
+gradlew assembleDebug
 
-```bash
-# 安装
-adb install -r android/app/build/outputs/apk/debug/app-debug.apk
+# release
+gradlew assembleRelease
 
-# 启动
-adb shell am start -n com.example.todolist/.MainActivity
-```
-
-### 9.4 发布到 GitHub
-
-> ⚠️ **签名密钥约定（v14 起强制）**
-> - 密钥文件：`android/keystore/release.keystore`（**不提交 Git**，公开仓库严禁泄露！）
-> - 所有 debug/release 构建均使用该密钥签名 → 覆盖安装保留数据
-> - **换电脑开发时，必须手动拷贝该密钥文件**，否则新签名会导致升级丢数据
-> - **请自行备份密钥**到网盘/安全位置（密钥丢失 = 无法升级旧版本）
-> - 密钥信息：默认 Android Debug 证书（alias: `androiddebugkey`，口令 `android`，来源 `C:\Users\long\.android\debug.keystore`）
-
-```bash
-# 提交更改
-git add -A
-git commit -m "feat: 描述"
-git push origin master
-
-# 构建正式签名 release APK
-cd android
-JAVA_HOME="C:/Program Files/Android/Android Studio/jbr" ./gradlew assembleRelease
-
-# 创建 Release（必须上传 release APK，勿用 debug 目录产物）
-gh release create vXX android/app/build/outputs/apk/release/app-release.apk \
-  --title "vXX - 标题" \
-  --notes "发布说明"
-```
-
-### 9.5 升级保留数据验证（每次发布前必做）
-
-```bash
-# 1. 手机已装旧版且有任务数据 → 覆盖安装新版
-adb install -r android/app/build/outputs/apk/release/app-release.apk
-
-# 2. 打开 App 确认任务数据完整保留
-adb shell am start -n com.example.todolist/.MainActivity
+# 安装到设备
+gradlew installDebug
 ```
 
 ---
 
-## 十、参考文档
+## 十三、后续开发建议
 
-### 10.1 项目内文档
+> 基于对当前代码库的全量分析，按价值/工作量综合评估排序。
 
-- `CLAUDE.md`: Claude 技术规范（设计规范、TDD 流程、调试规范）
-- `DEVELOPMENT.md`: 开发阶段指南
+### 🔴 高优先级（强烈建议尽快落地）
 
-### 10.2 外部参考
+#### 1. 补全单元测试
+**现状**：仅有 `useTodos.test.js`、`useTheme.test.js`、`rolloverOverdue` 测试，组件测试几乎为零。
 
-- [Capacitor 文档](https://capacitorjs.com/docs)
-- [Android App Widgets](https://developer.android.com/develop/ui/views/appwidgets)
-- [RemoteViews](https://developer.android.com/reference/android/widget/RemoteViews)
-- [RemoteViewsService](https://developer.android.com/reference/android/widget/RemoteViewsService)
-- [Vite 配置](https://vitejs.dev/config/)
+**建议补充**：
+- `TodoItem`：编辑态切换（铅笔按钮）、保存/取消、Enter/Escape 键盘事件
+- `TodoList`：日期分组正确性（今天/明天/已过期/无日期）
+- `AddTodo`：空输入防提交、`dueAt` 和 `location` 联动
+
+**工具已就绪**：Vitest + @testing-library/react + jsdom，无需额外配置。
+
+#### 2. 更新 `CLAUDE.md` 过时内容
+`CLAUDE.md` 中"数据持久化"一节仍写 `localStorage`，实际已是 SQLite（v17 起）。若 AI 工具读到过时内容会走错方向，建议同步更新。
+
+#### 3. 消除重复的 `loadTodayTodos` 逻辑
+`TodoWidgetProvider.java` 中的 `loadTodayTodos()` 方法与 `TodoWidgetViewsFactory.java` 中的逻辑几乎相同，属于冗余代码。建议删除 Provider 中的那份，让 Provider 仅做「触发更新」，数据加载统一由 Factory 负责。
 
 ---
 
-## 十一、联系方式
+### 🟡 中优先级（有余力时推进）
 
-- **GitHub**: yugusu704-lang
-- **项目仓库**: https://github.com/yugusu704-lang/to-do-list
+#### 4. 软删除真正落地
+**现状**：数据库有 `deleted_at` 字段，但 `deleteTodo()` 仍为硬删（从列表过滤）。
+
+**改动方案**：
+1. `useTodos.deleteTodo()` → 不从数组移除，改为设置 `deletedAt: Date.now()`
+2. `useTodos.js` 渲染时过滤 `!todo.deletedAt`
+3. `syncTodos()` 已能处理带 `deletedAt` 的记录
+
+**收益**：支持删除撤销、历史记录、数据归档统计。
+
+#### 5. 小组件任务行点击打开 App 对应任务
+**改动方案**：
+1. `AndroidManifest.xml` 添加 Deep Link intent-filter
+2. `TodoWidgetViewsFactory.getViewAt()` 增加「打开 App」的 fillInIntent（区别于「完成」的 fillInIntent）
+3. 前端通过 URL hash `#todo-{id}` 实现滚动定位
+
+#### 6. 备注字段（notes）UI 实现
+数据模型和 `updateTodo` API 已完整支持 `notes`，只差编辑态 UI（多行 textarea）和显示 UI（折叠/展开）。工作量小，价值高。
 
 ---
 
-**注意**: 本文档用于在 VSCode Cline 插件中接手开发。如有疑问，请参考项目内文档或外部参考链接。
+### 🟢 低优先级（长期规划）
+
+#### 7. 增量同步替代全量 syncTodos
+当任务量达到数千条时，`syncTodos()` 全量 UPSERT + DELETE 性能会下降。可实现：
+- 前端 diff：对比上次保存快照，仅发送变更条目
+- 原生端：分别调用 `insertOrUpdateTodos`（新增/修改）和 `softDeleteTodo`（删除）
+
+#### 8. 任务拖拽排序
+- 前端：`dnd-kit`（轻量，支持触摸拖拽）
+- 数据模型：新增 `order` 字段（整数）
+- SQLite：新增列，查询排序改为 `ORDER BY order ASC`
+
+#### 9. 任务提醒通知
+- 安装 `@capacitor/local-notifications`
+- 设置 `dueAt` 时注册本地通知
+- 需要 `AndroidManifest.xml` 申请通知权限
+
+#### 10. 任务分类/标签
+- 数据模型已有 `category` 字段，可直接扩展
+- FilterTabs 增加分类 Tab
+- 添加任务时显示分类选择器
+
+---
+
+### 开发工作流建议
+
+#### 功能开发节奏
+1. **先写测试**（RED）→ 实现功能（GREEN）→ 重构优化（REFACTOR）
+2. **前端先验证**：在 `npm run dev` 浏览器环境下确认功能正确，再打 APK 测原生层
+3. **小组件改动**单独验证：需要完整构建 APK（`npm run build:apk`），无法在浏览器中测试
+
+#### Git 提交规范
+```
+feat: 新功能
+fix: Bug 修复
+style: UI 调整（不影响功能）
+refactor: 代码重构（不改行为）
+test: 测试
+docs: 文档更新
+chore: 构建/工具链
+```
+版本号格式：`v{N}`，与 `.apk-version` 文件同步递增。
+
+#### AI 辅助开发注意事项
+- 开始任务前，让 AI 先读 `CLAUDE.md` + `HANDOFF.md`
+- 给 AI 的首要指令：**不修改 `android/keystore/` 和 `build.gradle` 的签名配置**
+- 本项目使用 `.agents/skills/` 下的 Skills 工作流，可使用 `/grill-me`、`/plan`、`/boost` 等斜杠命令
+
+---
+
+## 十四、参考文档
+
+### 14.1 项目内文档
+
+| 文件 | 内容 |
+|------|------|
+| [CLAUDE.md](CLAUDE.md) | 设计规范、TDD 流程、AI 开发守则 |
+| [DEVELOPMENT.md](DEVELOPMENT.md) | 8 阶段开发流程（需求→打包） |
+| [WIDGET_DEVELOPMENT.md](WIDGET_DEVELOPMENT.md) | Android 小组件开发专项文档 |
+| [docs/requirements.md](docs/requirements.md) | 原始需求确认书 |
+| [docs/sqlite-storage-plan.md](docs/sqlite-storage-plan.md) | v17 SQLite 重构方案 |
+
+### 14.2 外部参考
+
+- [Capacitor 官方文档](https://capacitorjs.com/docs)
+- [Android App Widgets 指南](https://developer.android.com/develop/ui/views/appwidgets)
+- [RemoteViews API](https://developer.android.com/reference/android/widget/RemoteViews)
+- [RemoteViewsService API](https://developer.android.com/reference/android/widget/RemoteViewsService)
+- [Vite 配置文档](https://vitejs.dev/config/)
+- [Tailwind CSS v4](https://tailwindcss.com/docs)
+- [Vitest 文档](https://vitest.dev/)
+
+---
+
+## 联系方式
+
+- **GitHub**：yugusu704-lang
+- **项目仓库**：https://github.com/yugusu704-lang/to-do-list
+
+---
+
+*本文档由 Antigravity AI 于 2026-09-01 基于代码库全量扫描生成。若代码有重大更新，请同步维护对应章节，尤其是版本更新历史（第九章）和已知问题（第十章）。*

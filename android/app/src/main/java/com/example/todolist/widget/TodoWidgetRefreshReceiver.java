@@ -15,8 +15,26 @@ public class TodoWidgetRefreshReceiver extends BroadcastReceiver {
     public void onReceive(Context context, Intent intent) {
         // 先注册下一天的闹钟（保持链条不断）
         scheduleNextAlarm(context);
+
+        // 零点重置已完成的每日习惯事项
+        try {
+            long todayStart = getTodayStartMillis();
+            com.example.todolist.db.TodoDbHelper.getInstance(context).resetDailyRoutinesForMidnight(todayStart);
+        } catch (Exception e) {
+            android.util.Log.e("TodoWidgetRefresh", "Failed to reset daily routines at midnight", e);
+        }
+
         // 刷新小部件
         TodoWidgetProvider.refreshAllWidgets(context);
+    }
+
+    private static long getTodayStartMillis() {
+        Calendar cal = Calendar.getInstance();
+        cal.set(Calendar.HOUR_OF_DAY, 0);
+        cal.set(Calendar.MINUTE, 0);
+        cal.set(Calendar.SECOND, 0);
+        cal.set(Calendar.MILLISECOND, 0);
+        return cal.getTimeInMillis();
     }
 
     // 注册下一个凌晨 0:00 的精确闹钟

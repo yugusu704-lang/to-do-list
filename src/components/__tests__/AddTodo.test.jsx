@@ -15,6 +15,7 @@ describe('AddTodo', () => {
       text: '买牛奶',
       dueAt: null,
       location: null,
+      isRoutine: false,
     });
   });
 
@@ -45,6 +46,7 @@ describe('AddTodo', () => {
       text: '开会',
       dueAt: '2026-07-30T15:00',
       location: null,
+      isRoutine: false,
     });
   });
 
@@ -66,17 +68,41 @@ describe('AddTodo', () => {
       text: '开会',
       dueAt: null,
       location: '公司会议室',
+      isRoutine: false,
     });
   });
 
-  test('提交后所有输入框清空', () => {
+  test('点击每日按钮后提交带 isRoutine: true', () => {
     const onAdd = vi.fn();
     render(<AddTodo onAdd={onAdd} />);
 
     const textInput = screen.getByPlaceholderText(/添加新任务/);
+    const routineBtn = screen.getByRole('button', { name: /每日/ });
+
+    fireEvent.click(routineBtn);
+    fireEvent.change(textInput, { target: { value: '吃钙片' } });
+    fireEvent.submit(textInput.closest('form'));
+
+    expect(onAdd).toHaveBeenCalledWith({
+      text: '吃钙片',
+      dueAt: null,
+      location: null,
+      isRoutine: true,
+    });
+  });
+
+  test('提交后所有输入框与每日状态重置清空', () => {
+    const onAdd = vi.fn();
+    render(<AddTodo onAdd={onAdd} />);
+
+    const textInput = screen.getByPlaceholderText(/添加新任务/);
+    const routineBtn = screen.getByRole('button', { name: /每日/ });
+
+    fireEvent.click(routineBtn);
     fireEvent.change(textInput, { target: { value: '买牛奶' } });
     fireEvent.submit(textInput.closest('form'));
 
     expect(textInput.value).toBe('');
+    expect(routineBtn.getAttribute('aria-pressed')).toBe('false');
   });
 });

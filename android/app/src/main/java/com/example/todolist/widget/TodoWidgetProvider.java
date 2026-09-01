@@ -139,6 +139,7 @@ public class TodoWidgetProvider extends AppWidgetProvider {
             ti.text = item.text;
             ti.dueAt = item.dueAt;
             ti.location = item.location;
+            ti.isRoutine = item.isRoutine;
             result.add(ti);
         }
         return result;
@@ -237,5 +238,6 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         String text;
         long dueAt;
         String location;
+        boolean isRoutine;
     }
 }

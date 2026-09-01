@@ -1,6 +1,18 @@
 import { useState, useCallback, useEffect } from 'react';
 import DateButton from './DateButton';
 
+// 循环/每日图标 SVG
+function RepeatIcon({ className = 'w-3.5 h-3.5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m17 2 4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+      <path d="m7 22-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+    </svg>
+  );
+}
+
 // 从 ISO datetime 字符串提取纯时间 HH:MM
 function formatTime(dueAt) {
   if (!dueAt) return null;
@@ -34,12 +46,14 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
   const [editText, setEditText] = useState(todo.text);
   const [editDueAt, setEditDueAt] = useState(todo.dueAt || '');
   const [editLocation, setEditLocation] = useState(todo.location || '');
+  const [editIsRoutine, setEditIsRoutine] = useState(Boolean(todo.isRoutine));
 
   // 当外部 todo 变更时同步本地编辑 state
   useEffect(() => {
     setEditText(todo.text);
     setEditDueAt(todo.dueAt || '');
     setEditLocation(todo.location || '');
+    setEditIsRoutine(Boolean(todo.isRoutine));
   }, [todo]);
 
   const time = formatTime(todo.dueAt);
@@ -50,6 +64,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditText(todo.text);
     setEditDueAt(todo.dueAt || '');
     setEditLocation(todo.location || '');
+    setEditIsRoutine(Boolean(todo.isRoutine));
   }, [todo]);
 
   const handleSave = useCallback((e) => {
@@ -62,10 +77,11 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
         text: trimmed,
         dueAt: editDueAt || null,
         location: editLocation.trim() || null,
+        isRoutine: editIsRoutine,
       });
     }
     setIsEditing(false);
-  }, [editText, editDueAt, editLocation, onUpdate, todo.id]);
+  }, [editText, editDueAt, editLocation, editIsRoutine, onUpdate, todo.id]);
 
   const handleCancel = useCallback((e) => {
     if (e) e.stopPropagation();
@@ -73,6 +89,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditText(todo.text);
     setEditDueAt(todo.dueAt || '');
     setEditLocation(todo.location || '');
+    setEditIsRoutine(Boolean(todo.isRoutine));
   }, [todo]);
 
   const handleKeyDown = (e) => {
@@ -97,15 +114,32 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
           className="h-10 w-full rounded-lg border border-border bg-card px-3 text-[15px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
         />
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <DateButton value={editDueAt} onChange={setEditDueAt} />
+
+          {/* 编辑模式下的每日必做切换 */}
+          <button
+            type="button"
+            aria-label="每日必做"
+            aria-pressed={editIsRoutine}
+            onClick={() => setEditIsRoutine(!editIsRoutine)}
+            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+              editIsRoutine
+                ? 'border-primary bg-primary/10 text-primary font-medium shadow-xs'
+                : 'border-border bg-card text-text-muted hover:border-text-muted'
+            }`}
+          >
+            <RepeatIcon />
+            <span>每日</span>
+          </button>
+
           <input
             type="text"
             value={editLocation}
             onChange={(e) => setEditLocation(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="地点 (可选)..."
-            className="h-10 flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
+            className="h-10 min-w-[120px] flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
           />
         </div>
 
@@ -165,13 +199,22 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
 
       {/* 任务内容区（文字不绑定编辑点击，防止滚动或浏览时误触） */}
       <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-0.5">
-        <span
-          className={`break-words text-[15px] leading-snug tracking-normal transition-all duration-200 ${
-            todo.completed ? 'text-text-muted line-through decoration-[#D6D3D1]' : 'text-text'
-          }`}
-        >
-          {todo.text}
-        </span>
+        <div className="flex items-center gap-2">
+          <span
+            className={`break-words text-[15px] leading-snug tracking-normal transition-all duration-200 ${
+              todo.completed ? 'text-text-muted line-through decoration-[#D6D3D1]' : 'text-text'
+            }`}
+          >
+            {todo.text}
+          </span>
+          {/* 每日习惯标识胶囊 */}
+          {todo.isRoutine && (
+            <span className="inline-flex items-center gap-1 flex-shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+              <RepeatIcon className="w-3 h-3" />
+              <span>每日</span>
+            </span>
+          )}
+        </div>
 
         {/* 次要信息栏（时间与地点） */}
         {(time || todo.location) && (

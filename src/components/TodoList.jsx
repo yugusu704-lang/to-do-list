@@ -72,7 +72,7 @@ function groupByDueDate(todos) {
 }
 
 // 任务列表组件（含日期分组）
-export default function TodoList({ todos, filter, onToggle, onDelete, onUpdate }) {
+export default function TodoList({ todos, filter, hasOtherContent = false, onToggle, onDelete, onUpdate }) {
   const filtered =
     filter === 'active'
       ? todos.filter((t) => !t.completed)
@@ -81,13 +81,16 @@ export default function TodoList({ todos, filter, onToggle, onDelete, onUpdate }
         : todos;
 
   if (filtered.length === 0) {
+    if (hasOtherContent) {
+      return null;
+    }
     return <EmptyState filter={filter} />;
   }
 
   const groups = groupByDueDate(filtered);
 
   return (
-    <div className="flex flex-1 flex-col gap-4 px-4 py-3">
+    <div className="flex flex-1 flex-col gap-4">
       {Object.entries(groups).map(([date, items]) => (
         <div key={date} className="flex flex-col gap-2">
           <div className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
