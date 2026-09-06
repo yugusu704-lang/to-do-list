@@ -73,12 +73,14 @@ export default function DateButton({ value, onChange }) {
       <button
         type="button"
         onClick={handleClick}
-        className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-[13px] transition-all duration-200 hover:border-text-muted active:scale-[0.97] ${
-          label ? 'text-text' : 'text-text-muted'
+        className={`flex h-9 sm:h-10 w-full items-center justify-center gap-1.5 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] backdrop-blur-xs ${
+          label
+            ? 'border-primary/40 bg-primary/10 text-primary font-medium shadow-2xs'
+            : 'border-white/70 dark:border-white/10 bg-white/50 dark:bg-white/5 text-text-muted hover:border-text-secondary hover:text-text'
         }`}
       >
         <CalendarIcon />
-        <span>{label || '添加日期'}</span>
+        <span className="truncate px-1">{label || '添加日期'}</span>
       </button>
     </div>
   );

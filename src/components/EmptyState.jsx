@@ -9,26 +9,28 @@ export default function EmptyState({ filter = 'all' }) {
   const { title, subtitle } = messages[filter];
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-3 px-8 py-10">
-      {/* 装饰圆环 */}
-      <div className="relative mb-2">
-        <div className="h-16 w-16 rounded-full border-2 border-dashed border-[#D6D3D1] opacity-40" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            className="h-6 w-6 text-text-muted opacity-50"
-          >
+    <div className="flex flex-1 flex-col items-center justify-center gap-2.5 px-6 py-12 text-center select-none animate-[fadeInUp_0.3s_ease-out]">
+      {/* 极简液态质感图符 */}
+      <div className="liquid-glass-card flex h-14 w-14 items-center justify-center rounded-2xl mb-1 shadow-xs">
+        {filter === 'completed' ? (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-done">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+            <polyline points="22 4 12 14.01 9 11.01" />
+          </svg>
+        ) : filter === 'active' ? (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 14 14" />
+          </svg>
+        ) : (
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" className="text-text-muted">
             <path d="M12 5v14M5 12h14" />
           </svg>
-        </div>
+        )}
       </div>
-      <p className="text-center text-[15px] font-medium text-text-secondary">{title}</p>
-      <p className="text-center text-[13px] text-text-muted">{subtitle}</p>
+
+      <p className="text-[15px] font-semibold tracking-tight text-text">{title}</p>
+      <p className="text-[13px] text-text-muted leading-relaxed max-w-[260px]">{subtitle}</p>
     </div>
   );
 }

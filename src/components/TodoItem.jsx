@@ -101,9 +101,10 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
   };
 
   // 编辑模式视图
+  // 编辑模式视图
   if (isEditing) {
     return (
-      <div className="relative flex flex-col gap-3 rounded-xl bg-card p-4 shadow-[var(--shadow-card-hover)] border border-primary/30 transition-all duration-200">
+      <div className="liquid-glass-card relative flex flex-col gap-3 rounded-2xl p-4 border border-primary/40">
         <input
           type="text"
           value={editText}
@@ -111,7 +112,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
           onKeyDown={handleKeyDown}
           autoFocus
           placeholder="任务内容..."
-          className="h-10 w-full rounded-lg border border-border bg-card px-3 text-[15px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
+          className="h-10 w-full rounded-xl border border-border/70 bg-white/60 dark:bg-white/5 px-3.5 text-[15px] text-text outline-none focus:border-primary focus:bg-white/80 dark:focus:bg-white/10 focus:shadow-[0_0_0_3px_rgba(37,99,235,0.12)] transition-all duration-200 backdrop-blur-xs"
         />
 
         <div className="flex flex-wrap gap-2">
@@ -123,10 +124,10 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
             aria-label="每日必做"
             aria-pressed={editIsRoutine}
             onClick={() => setEditIsRoutine(!editIsRoutine)}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+            className={`flex h-10 items-center justify-center gap-1.5 px-3.5 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
               editIsRoutine
-                ? 'border-primary bg-primary/10 text-primary font-medium shadow-xs'
-                : 'border-border bg-card text-text-muted hover:border-text-muted'
+                ? 'border-primary bg-primary/10 text-primary font-semibold shadow-xs'
+                : 'border-border/70 bg-white/50 dark:bg-white/5 text-text-muted hover:border-text-secondary hover:text-text backdrop-blur-xs'
             }`}
           >
             <RepeatIcon />
@@ -139,7 +140,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
             onChange={(e) => setEditLocation(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="地点 (可选)..."
-            className="h-10 min-w-[120px] flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
+            className="h-10 min-w-[120px] flex-1 rounded-xl border border-border/70 bg-white/50 dark:bg-white/5 px-3.5 text-[13px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.12)] transition-all duration-200 backdrop-blur-xs"
           />
         </div>
 
@@ -147,14 +148,14 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
           <button
             type="button"
             onClick={handleCancel}
-            className="rounded-lg px-3 py-1.5 text-xs text-text-secondary transition-colors hover:bg-black/5 dark:hover:bg-white/10 active:scale-95"
+            className="rounded-xl px-3.5 py-1.5 text-xs text-text-secondary transition-colors hover:bg-white/60 dark:hover:bg-white/10 active:scale-95"
           >
             取消
           </button>
           <button
             type="button"
             onClick={handleSave}
-            className="rounded-lg bg-btn-main px-4 py-1.5 text-xs font-medium text-white transition-all hover:bg-btn-main-hover active:scale-95"
+            className="rounded-xl bg-btn-main px-4.5 py-1.5 text-xs font-semibold text-white transition-all hover:bg-btn-main-hover active:scale-95 shadow-xs"
           >
             保存
           </button>
@@ -163,26 +164,26 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     );
   }
 
-  // 常规浏览视图（垂直居中对齐、左右均衡舒展）
+  // 常规浏览视图（液态玻璃质感卡片）
   return (
     <div
-      className={`group relative flex items-center gap-3 sm:gap-4 overflow-hidden rounded-xl bg-card px-4 sm:px-5 py-3.5 shadow-[var(--shadow-card)] transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.99] ${
-        todo.completed ? 'opacity-60' : ''
+      className={`liquid-glass-card group relative flex items-center gap-3 sm:gap-3.5 overflow-hidden rounded-2xl px-4 sm:px-4.5 py-3.5 active:scale-[0.99] ${
+        todo.completed ? 'opacity-60 saturate-75' : ''
       }`}
     >
-      {/* 圆圈复选框（上下居中） */}
+      {/* 圆圈复选框（水滴拟态交互） */}
       <button
         type="button"
         aria-label="切换完成状态"
         onClick={(e) => {
           e.stopPropagation();
-          createRipple(e, e.currentTarget.closest('.ripple-container, [class*="rounded-xl"]'));
+          createRipple(e, e.currentTarget.closest('.ripple-container, [class*="rounded-2xl"]'));
           onToggle(todo.id);
         }}
         className={`flex h-[24px] w-[24px] flex-shrink-0 items-center justify-center rounded-full border-2 transition-all duration-200 active:scale-90 ${
           todo.completed
-            ? 'border-done bg-done'
-            : 'border-border hover:border-done'
+            ? 'border-done bg-done shadow-2xs'
+            : 'border-border/80 hover:border-done bg-white/60 dark:bg-white/5 backdrop-blur-xs'
         }`}
       >
         <svg
@@ -191,68 +192,67 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
           stroke="white"
           strokeWidth="2.5"
           strokeLinecap="round"
-          className={`h-3 w-3 transition-opacity duration-200 ${todo.completed ? 'opacity-100' : 'opacity-0'}`}
+          className={`h-3 w-3 transition-all duration-200 ${
+            todo.completed ? 'opacity-100 scale-100 animate-check-spring' : 'opacity-0 scale-50'
+          }`}
         >
           <path d="M2 6l3 3 5-5" />
         </svg>
       </button>
 
-      {/* 任务内容区（文字不绑定编辑点击，防止滚动或浏览时误触） */}
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 py-0.5">
+      {/* 任务内容区 */}
+      <div className="flex min-w-0 flex-1 flex-col justify-center gap-1 py-0.5">
         <div className="flex items-center gap-2">
           <span
-            className={`break-words text-[15px] leading-snug tracking-normal transition-all duration-200 ${
-              todo.completed ? 'text-text-muted line-through decoration-[#D6D3D1]' : 'text-text'
+            className={`break-words text-[15px] font-normal leading-snug tracking-normal transition-all duration-200 ${
+              todo.completed ? 'text-text-muted line-through decoration-border' : 'text-text'
             }`}
           >
             {todo.text}
           </span>
           {/* 每日习惯标识胶囊 */}
           {todo.isRoutine && (
-            <span className="inline-flex items-center gap-1 flex-shrink-0 rounded-md bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary">
+            <span className="inline-flex items-center gap-1 flex-shrink-0 rounded-lg bg-primary/10 px-1.5 py-0.5 text-[11px] font-semibold text-primary border border-primary/20 backdrop-blur-xs">
               <RepeatIcon className="w-3 h-3" />
               <span>每日</span>
             </span>
           )}
         </div>
 
-        {/* 次要信息栏（时间与地点） */}
+        {/* 次要信息栏（时间与地点，精致透光微芯片） */}
         {(time || todo.location) && (
-          <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-text-muted">
+          <div className="flex flex-wrap items-center gap-1.5 pt-0.5 text-xs">
             {time && (
-              <span className="inline-flex items-center gap-1 font-medium text-text-secondary/80">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
+              <span className="inline-flex items-center gap-1 rounded-md bg-white/60 dark:bg-white/10 px-1.5 py-0.5 text-[11px] font-medium text-text-secondary border border-white/60 dark:border-white/10 backdrop-blur-xs shadow-2xs">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                {time}
+                <span>{time}</span>
               </span>
             )}
-            {time && todo.location && (
-              <span className="text-[10px] text-[#D6D3D1]">•</span>
-            )}
             {todo.location && (
-              <span className="inline-flex items-center gap-1 truncate max-w-[140px] sm:max-w-[220px]">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
+              <span className="inline-flex items-center gap-1 rounded-md bg-white/60 dark:bg-white/10 px-1.5 py-0.5 text-[11px] font-medium text-text-secondary truncate max-w-[140px] sm:max-w-[220px] border border-white/60 dark:border-white/10 backdrop-blur-xs shadow-2xs">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                {todo.location}
+                <span>{todo.location}</span>
               </span>
             )}
           </div>
         )}
       </div>
 
-      {/* 右侧操作按钮区（上下边框正中垂直居中、尺寸调大 18px 图标、40px 触控区） */}
-      <div className="flex flex-shrink-0 items-center gap-1 self-center pl-1">
+      {/* 右侧操作按钮区 */}
+      <div className="flex flex-shrink-0 items-center gap-0.5 self-center pl-1">
         <button
           type="button"
           aria-label="编辑任务"
           onClick={handleStartEdit}
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted transition-all duration-150 hover:bg-black/5 hover:text-primary active:scale-90"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-text-muted transition-all duration-150 hover:bg-white/60 dark:hover:bg-white/10 hover:text-primary active:scale-90"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
           </svg>
@@ -265,9 +265,9 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
             e.stopPropagation();
             onDelete(todo.id);
           }}
-          className="flex h-10 w-10 items-center justify-center rounded-xl text-text-muted transition-all duration-150 hover:bg-red-50 hover:text-danger active:scale-90"
+          className="flex h-9 w-9 items-center justify-center rounded-xl text-text-muted transition-all duration-150 hover:bg-danger/10 hover:text-danger active:scale-90"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="18" y1="6" x2="6" y2="18" />
             <line x1="6" y1="6" x2="18" y2="18" />
           </svg>

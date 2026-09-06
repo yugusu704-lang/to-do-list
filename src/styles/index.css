@@ -1,37 +1,39 @@
 @import "tailwindcss";
 
 :root {
-  --color-bg: #F5F0EB;
-  --color-card: #FFFFFF;
-  --color-text: #2F3437;
-  --color-text-secondary: #78716C;
-  --color-text-muted: #A8A29E;
+  --color-bg: #EDE8DF;
+  --color-card: #FDFBF8;
+  --color-text: #18181B;
+  --color-text-secondary: #71717A;
+  --color-text-muted: #A1A1AA;
   --color-primary: #2563EB;
-  --color-done: #16A34A;
-  --color-danger: #DC2626;
-  --color-border: #E8E5E3;
-  --color-border-light: #F5F5F4;
-  --color-btn-main: #2F3437;
-  --color-btn-main-hover: #1a1d1f;
-  --shadow-card: 0 1px 2px rgba(0,0,0,0.04);
-  --shadow-card-hover: 0 2px 8px rgba(0,0,0,0.06);
+  --color-done: #10B981;
+  --color-danger: #EF4444;
+  --color-border: #E8E6E1;
+  --color-border-light: #F2F0EC;
+  --color-btn-main: #18181B;
+  --color-btn-main-hover: #27272A;
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.03), 0 1px 2px rgba(0, 0, 0, 0.02);
+  --shadow-card-hover: 0 6px 16px rgba(0, 0, 0, 0.05), 0 2px 4px rgba(0, 0, 0, 0.02);
+  --shadow-dock: 0 -4px 24px rgba(0, 0, 0, 0.04);
 }
 
 .dark {
-  --color-bg: #121214;
-  --color-card: #1C1C1F;
-  --color-text: #F4F4F5;
-  --color-text-secondary: #A1A1AA;
-  --color-text-muted: #71717A;
-  --color-primary: #3B82F6;
-  --color-done: #22C55E;
-  --color-danger: #EF4444;
-  --color-border: #2D2D32;
-  --color-border-light: #222226;
-  --color-btn-main: #27272A;
-  --color-btn-main-hover: #3F3F46;
-  --shadow-card: 0 1px 3px rgba(0,0,0,0.3);
-  --shadow-card-hover: 0 3px 10px rgba(0,0,0,0.4);
+  --color-bg: #1A0F0A;
+  --color-card: #2A1A12;
+  --color-text: #F5F0EB;
+  --color-text-secondary: #B8A99A;
+  --color-text-muted: #7A6558;
+  --color-primary: #60A5FA;
+  --color-done: #34D399;
+  --color-danger: #FB7185;
+  --color-border: #3D2518;
+  --color-border-light: #2E1A10;
+  --color-btn-main: #3D2518;
+  --color-btn-main-hover: #52321F;
+  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.6);
+  --shadow-card-hover: 0 8px 28px rgba(0, 0, 0, 0.7);
+  --shadow-dock: 0 -4px 24px rgba(0, 0, 0, 0.6);
 }
 
 @theme {
@@ -49,10 +51,11 @@
   --color-btn-main-hover: var(--color-btn-main-hover);
   --shadow-card: var(--shadow-card);
   --shadow-card-hover: var(--shadow-card-hover);
+  --shadow-dock: var(--shadow-dock);
 }
 
 body {
-  font-family: 'Outfit', -apple-system, system-ui, 'Segoe UI', sans-serif;
+  font-family: 'Outfit', -apple-system, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--color-bg);
   color: var(--color-text);
   margin: 0;
@@ -99,3 +102,152 @@ body {
     transform: translateY(0);
   }
 }
+
+/* 复选框弹簧勾选 */
+@keyframes checkSpring {
+  0% {
+    transform: scale(0.6);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-check-spring {
+  animation: checkSpring 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+/* 隐藏滚动条 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ============================================================
+   iOS 26 Liquid Glass 材质系统
+   核心原理：强色彩背景 → backdrop-filter 产生可见折射
+   ============================================================ */
+
+/* 液态玻璃卡片 — Light Mode */
+.liquid-glass-card {
+  /* 极低不透明度背景，让背景色彩透过 */
+  background: rgba(255, 255, 255, 0.18);
+  backdrop-filter: blur(40px) saturate(220%);
+  -webkit-backdrop-filter: blur(40px) saturate(220%);
+
+  /* 同心圆角几何：卡片 24px */
+  border-radius: 24px;
+
+  /* iOS 26 凸透镜高光系统：顶部强白光 + 左侧副光 + 底部暗边 */
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  box-shadow:
+    /* 顶部凸透镜主高光 */
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 0.95),
+    /* 左侧副光 */
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.4),
+    /* 底部暗压边 */
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.06),
+    /* 外层景深阴影 */
+    0 8px 32px -4px rgba(0, 0, 0, 0.12),
+    0 2px 8px -2px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.liquid-glass-card:hover {
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.75);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 255, 255, 1),
+    inset 1px 0 0 0 rgba(255, 255, 255, 0.5),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.05),
+    0 14px 40px -4px rgba(0, 0, 0, 0.16),
+    0 4px 12px -2px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+/* 液态玻璃卡片 — Dark Mode（温暖深枣色系） */
+.dark .liquid-glass-card {
+  background: rgba(255, 220, 180, 0.06);
+  backdrop-filter: blur(40px) saturate(200%);
+  -webkit-backdrop-filter: blur(40px) saturate(200%);
+  border: 1px solid rgba(255, 200, 150, 0.18);
+  box-shadow:
+    /* 顶部高光（暖琥珀色调） */
+    inset 0 1.5px 0 0 rgba(255, 220, 180, 0.35),
+    inset 1px 0 0 0 rgba(255, 200, 150, 0.15),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.5),
+    0 8px 32px -4px rgba(0, 0, 0, 0.7),
+    0 2px 8px -2px rgba(0, 0, 0, 0.4);
+}
+
+.dark .liquid-glass-card:hover {
+  background: rgba(255, 220, 180, 0.10);
+  border-color: rgba(255, 200, 150, 0.28);
+  box-shadow:
+    inset 0 1.5px 0 0 rgba(255, 220, 180, 0.5),
+    inset 1px 0 0 0 rgba(255, 200, 150, 0.22),
+    inset 0 -1px 0 0 rgba(0, 0, 0, 0.5),
+    0 14px 40px -4px rgba(0, 0, 0, 0.8),
+    0 4px 12px -2px rgba(0, 0, 0, 0.5);
+  transform: translateY(-1px);
+}
+
+/* 底部 Dock — Light Mode */
+.liquid-glass-dock {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(48px) saturate(220%);
+  -webkit-backdrop-filter: blur(48px) saturate(220%);
+  border-top: 1px solid rgba(255, 255, 255, 0.8);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 255, 255, 0.95),
+    0 -12px 40px rgba(0, 0, 0, 0.06);
+}
+
+/* 底部 Dock — Dark Mode */
+.dark .liquid-glass-dock {
+  background: rgba(40, 20, 10, 0.75);
+  backdrop-filter: blur(48px) saturate(200%);
+  -webkit-backdrop-filter: blur(48px) saturate(200%);
+  border-top: 1px solid rgba(255, 200, 150, 0.15);
+  box-shadow:
+    inset 0 1px 0 0 rgba(255, 220, 180, 0.25),
+    0 -12px 40px rgba(0, 0, 0, 0.7);
+}
+
+/* 环境光斑漂移动画 */
+@keyframes fluid-drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, 30px) scale(1.08); }
+  66% { transform: translate(-20px, 50px) scale(0.95); }
+}
+
+@keyframes fluid-drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-35px, -40px) scale(1.12); }
+  66% { transform: translate(30px, -20px) scale(0.92); }
+}
+
+@keyframes fluid-drift-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -35px) scale(0.96); }
+  66% { transform: translate(-25px, 25px) scale(1.06); }
+}
+
+.animate-fluid-1 { animation: fluid-drift-1 20s ease-in-out infinite; }
+.animate-fluid-2 { animation: fluid-drift-2 26s ease-in-out infinite; }
+.animate-fluid-3 { animation: fluid-drift-3 22s ease-in-out infinite; }
+
+/* 环境光斑颜色 — 浅色/暗色模式自动切换 */
+.orb-1 { background: radial-gradient(circle, rgba(255,107,107,0.82) 0%, rgba(255,179,71,0.65) 50%, transparent 75%); }
+.orb-2 { background: radial-gradient(circle, rgba(168,130,255,0.78) 0%, rgba(100,160,255,0.60) 55%, transparent 78%); }
+.orb-3 { background: radial-gradient(circle, rgba(80,220,160,0.75) 0%, rgba(50,180,130,0.55) 55%, transparent 78%); }
+
+.dark .orb-1 { background: radial-gradient(circle, rgba(160,40,20,0.88) 0%, rgba(120,30,15,0.70) 50%, transparent 75%); }
+.dark .orb-2 { background: radial-gradient(circle, rgba(180,100,20,0.72) 0%, rgba(140,70,10,0.55) 55%, transparent 78%); }
+.dark .orb-3 { background: radial-gradient(circle, rgba(140,30,60,0.68) 0%, rgba(100,20,40,0.50) 55%, transparent 78%); }

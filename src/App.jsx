@@ -107,25 +107,53 @@ export default function App() {
     };
   }, [toast]);
 
+  const formattedDate = new Intl.DateTimeFormat('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    weekday: 'short',
+  }).format(new Date());
+
   return (
-    <div className="flex h-dvh w-full flex-col overflow-hidden bg-bg">
+    <div className="relative flex h-dvh w-full flex-col overflow-hidden bg-bg">
+      {/* 动态环境流体光斑底层 (Ambient Fluid Mesh Canvas) */}
+      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
+        {/* 光斑 1: 浅色=珊瑚橙金 / 暗色=深枣红 */}
+        <div
+          className="animate-fluid-1 absolute -top-32 -left-28 h-[360px] w-[360px] rounded-full blur-[80px] orb-1"
+        />
+        {/* 光斑 2: 浅色=薰衣草紫蓝 / 暗色=琥珀暖金 */}
+        <div
+          className="animate-fluid-2 absolute top-1/4 -right-24 h-[380px] w-[380px] rounded-full blur-[80px] orb-2"
+        />
+        {/* 光斑 3: 浅色=薄荷翠绿 / 暗色=深桃玫瑰 */}
+        <div
+          className="animate-fluid-3 absolute -bottom-24 left-1/3 h-[340px] w-[340px] rounded-full blur-[80px] orb-3"
+        />
+      </div>
+
+
       {/* 响应式居中容器：常规手机满宽，折叠屏/大屏/平板自动限制黄金宽度居中 */}
       <div className="mx-auto flex h-full w-full max-w-lg md:max-w-xl flex-col overflow-hidden">
-        {/* 标题区（双行呼吸感排版：大标题 + 状态轻胶囊 + 右侧对称操作区） */}
-        <header className="flex flex-col gap-2.5 px-4 sm:px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-3">
-          {/* 第一行：大标题 + 右侧操作组 */}
+        {/* 标题区（双行呼吸感排版：日期问候 + 大标题 + 状态轻胶囊 + 右侧对称操作区） */}
+        <header className="flex flex-col gap-2.5 px-4 sm:px-5 pt-[max(1.25rem,env(safe-area-inset-top))] pb-3">
+          {/* 第一行：日期提示、大标题 + 右侧操作组 */}
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-text leading-tight">
-              待办清单
-            </h1>
+            <div>
+              <p className="text-[12px] font-semibold tracking-wider text-text-muted">
+                {formattedDate}
+              </p>
+              <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-text leading-tight">
+                待办清单
+              </h1>
+            </div>
 
-            <div className="flex flex-shrink-0 items-center gap-2">
+            <div className="flex flex-shrink-0 items-center gap-1.5 self-center">
               {completedCount > 0 && (
                 <button
                   type="button"
                   onClick={handleClearCompleted}
                   aria-label={`清除已完成的 ${completedCount} 项任务`}
-                  className="inline-flex h-[38px] items-center gap-1.5 rounded-xl border border-border/80 bg-card px-2.5 sm:px-3 text-xs font-medium text-text-secondary shadow-sm transition-all duration-150 hover:border-danger/40 hover:bg-danger/5 hover:text-danger active:scale-95"
+                  className="inline-flex h-9 sm:h-9.5 items-center gap-1.5 rounded-2xl border border-white/60 dark:border-white/10 bg-white/60 dark:bg-white/5 px-2.5 sm:px-3 text-xs font-medium text-text-secondary shadow-2xs transition-all duration-150 hover:border-danger/40 hover:bg-danger/8 hover:text-danger active:scale-95 backdrop-blur-md"
                 >
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70 flex-shrink-0">
                     <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -139,10 +167,10 @@ export default function App() {
 
           {/* 第二行：未完成状态轻胶囊徽标 */}
           <div className="flex items-center">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/80 bg-card px-3 py-1 text-xs text-text-secondary shadow-xs">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/70 dark:border-white/10 bg-white/60 dark:bg-white/5 px-3 py-1 text-xs text-text-secondary shadow-2xs backdrop-blur-md">
               <span
-                className={`h-2 w-2 rounded-full ${
-                  activeCount > 0 ? 'bg-primary' : 'bg-done'
+                className={`h-2 w-2 rounded-full transition-colors duration-200 ${
+                  activeCount > 0 ? 'bg-primary animate-pulse' : 'bg-done'
                 }`}
               />
               <span className="font-medium tracking-wide">
@@ -152,11 +180,15 @@ export default function App() {
           </div>
         </header>
 
-        {/* 筛选栏 */}
-        <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
+        {/* 筛选栏（现代胶囊分段控制器，带实时数量展示） */}
+        <FilterTabs
+          currentFilter={filter}
+          onFilterChange={setFilter}
+          counts={{ all: todos.length, active: activeCount, completed: completedCount }}
+        />
 
         {/* 任务列表（独立滚动区，底部导航栏固定不动） */}
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 sm:px-5 py-2.5">
           {/* 独立每日习惯打卡专区 */}
           <DailyRoutineSection
             routines={routines}
@@ -184,17 +216,17 @@ export default function App() {
       {/* 撤销 toast */}
       {toast && (
         <div
-          className="fixed bottom-28 left-1/2 z-10 -translate-x-1/2 animate-[fadeInUp_0.2s_ease-out]"
+          className="fixed bottom-24 left-1/2 z-30 -translate-x-1/2 animate-[fadeInUp_0.2s_ease-out]"
           role="status"
           aria-live="polite"
         >
-          <div className="flex items-center gap-3 rounded-xl bg-[#2F3437] px-4 py-3 text-sm text-white shadow-lg">
-            <span>{toast.message}</span>
+          <div className="flex items-center gap-3 rounded-2xl border border-white/10 bg-[#18181B] px-4 py-2.5 text-sm text-white shadow-xl backdrop-blur-md">
+            <span className="text-[13px] font-normal">{toast.message}</span>
             {toast.undoable && (
               <button
                 type="button"
                 onClick={handleUndo}
-                className="font-semibold text-blue-400 transition-colors hover:text-blue-300"
+                className="font-semibold text-[13px] text-blue-400 transition-colors hover:text-blue-300 active:scale-95"
               >
                 撤销
               </button>

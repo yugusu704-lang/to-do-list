@@ -39,67 +39,83 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
   };
 
   return (
-    <div className="border-t border-border/80 bg-card/40 backdrop-blur-md px-4 sm:px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
-        {/* 任务内容输入 */}
-        <input
-          ref={ref}
-          type="text"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={isRoutine ? '添加每日必做事项 (如: 每天吃钙片)...' : '添加新任务...'}
-          autoComplete="off"
-          className="h-11 rounded-xl border border-border bg-card px-4 text-[14px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]"
-        />
+    <div className="liquid-glass-dock px-4 sm:px-5 pt-2.5 pb-[max(12px,env(safe-area-inset-bottom))]">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-2 rounded-2xl border border-white/70 dark:border-white/10 bg-white/70 dark:bg-white/5 p-2 sm:p-2.5 shadow-2xs backdrop-blur-xl transition-all duration-200 focus-within:border-primary/50 focus-within:shadow-xs">
+        {/* 顶部主输入行 + 提交按钮 */}
+        <div className="flex items-center gap-2">
+          <input
+            ref={ref}
+            type="text"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={isRoutine ? '添加每日必做事项 (如: 每天吃钙片)...' : '添加新任务...'}
+            autoComplete="off"
+            className="h-10 min-w-0 flex-1 bg-transparent px-2 text-[15px] text-text placeholder:text-text-muted outline-none"
+          />
+          <button
+            type="submit"
+            disabled={!text.trim()}
+            className={`flex h-9 items-center justify-center gap-1 rounded-xl px-3.5 text-[13px] font-semibold transition-all duration-150 active:scale-95 ${
+              text.trim()
+                ? 'bg-btn-main text-white shadow-xs hover:bg-btn-main-hover cursor-pointer'
+                : 'bg-black/5 dark:bg-white/10 text-text-muted cursor-not-allowed opacity-50'
+            }`}
+          >
+            <span>{isRoutine ? '添加每日必做' : '添加'}</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14" />
+              <path d="m12 5 7 7-7 7" />
+            </svg>
+          </button>
+        </div>
 
-        {/* 日期按钮 + 地点按钮 + 每日必做切换 */}
-        <div className="flex gap-2">
+        {/* 底部属性快捷芯片栏 */}
+        <div className="flex items-center gap-1.5 pt-1.5 border-t border-white/60 dark:border-white/10">
           <DateButton value={dueAt} onChange={setDueAt} />
 
-          {/* 每日必做开关胶囊 */}
+          {/* 每日必做开关 */}
           <button
             type="button"
             aria-label="每日必做"
             aria-pressed={isRoutine}
             onClick={() => setIsRoutine(!isRoutine)}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+            className={`flex h-9 items-center justify-center gap-1.5 px-3 rounded-xl border text-[12px] font-medium transition-all duration-200 active:scale-[0.97] ${
               isRoutine
-                ? 'border-primary bg-primary/10 text-primary font-medium shadow-xs'
-                : 'border-border bg-card text-text-muted hover:border-text-muted'
+                ? 'border-primary bg-primary/10 text-primary font-semibold shadow-2xs'
+                : 'border-white/70 dark:border-white/10 bg-white/50 dark:bg-white/5 text-text-muted hover:border-text-secondary hover:text-text backdrop-blur-xs'
             }`}
           >
-            <RepeatIcon />
+            <RepeatIcon className="w-3.5 h-3.5" />
             <span>每日</span>
           </button>
 
+          {/* 地点输入 / 按钮 */}
           {showLocation ? (
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="输入地点..."
-              autoFocus
-              autoComplete="off"
-              className="h-10 flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]"
-            />
+            <div className="relative flex-1">
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="输入地点..."
+                autoFocus
+                autoComplete="off"
+                className="h-9 w-full rounded-xl border border-white/70 dark:border-white/10 bg-white/60 dark:bg-white/10 px-2.5 text-[12px] text-text outline-none focus:border-primary transition-all backdrop-blur-xs"
+              />
+            </div>
           ) : (
             <button
               type="button"
               onClick={() => setShowLocation(true)}
-              className="flex h-10 flex-1 items-center justify-center rounded-xl border border-border bg-card text-[13px] text-text-muted transition-all duration-200 hover:border-text-muted active:scale-[0.97]"
+              className="flex h-9 items-center justify-center gap-1 px-3 rounded-xl border border-white/70 dark:border-white/10 bg-white/50 dark:bg-white/5 text-[12px] text-text-muted transition-all duration-200 hover:border-text-secondary hover:text-text active:scale-[0.97] backdrop-blur-xs"
             >
-              地点
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              <span>地点</span>
             </button>
           )}
         </div>
-
-        {/* 添加按钮 */}
-        <button
-          type="submit"
-          className="h-11 rounded-xl bg-btn-main text-[15px] font-medium text-white transition-all duration-150 hover:bg-btn-main-hover active:scale-[0.97]"
-        >
-          {isRoutine ? '添加每日必做' : '添加'}
-        </button>
       </form>
     </div>
   );

@@ -2,8 +2,11 @@ import { render, screen } from '@testing-library/react';
 import { describe, test, expect, vi } from 'vitest';
 import TodoList from '../TodoList';
 
+const now = new Date();
+const localTodayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}T12:00`;
+
 const mockTodos = [
-  { id: '1', text: '任务一', completed: false, category: null, createdAt: Date.now(), dueAt: new Date().toISOString().slice(0, 16), location: null },
+  { id: '1', text: '任务一', completed: false, category: null, createdAt: Date.now(), dueAt: localTodayStr, location: null },
   { id: '2', text: '任务二', completed: true, category: null, createdAt: Date.now() - 86400000, dueAt: null, location: null },
 ];
 

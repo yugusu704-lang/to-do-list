@@ -38,38 +38,38 @@ export default function DailyRoutineSection({
 
   return (
     <section aria-label="每日必做专区" className="mb-4">
-      <div className="rounded-2xl border border-border/80 bg-card/60 p-3.5 sm:p-4 shadow-xs backdrop-blur-xs transition-all duration-200">
+      <div className="liquid-glass-card rounded-3xl p-3.5 sm:p-4.5">
         {/* 专区顶栏：标题 + 进度胶囊 + 进度条 */}
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-border/40">
+        <div className="flex items-center justify-between gap-3 pb-3 border-b border-white/60 dark:border-white/10">
           <div className="flex items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <RepeatIcon className="w-3.5 h-3.5" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/12 text-primary border border-primary/20 shadow-2xs">
+              <RepeatIcon className="w-4 h-4" />
             </div>
             <h2 className="text-[15px] font-semibold tracking-tight text-text">
               每日必做
             </h2>
             <span
-              className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors border ${
                 isAllDone
-                  ? 'bg-done/15 text-done'
-                  : 'bg-primary/10 text-primary'
+                  ? 'bg-done/15 text-done border-done/30'
+                  : 'bg-primary/10 text-primary border-primary/20'
               }`}
             >
               {isAllDone ? '今日已达成 🎉' : `${completedCount}/${totalCount} 完成`}
             </span>
           </div>
 
-          {/* 微型进度条 */}
+          {/* 微型平滑进度条 */}
           <div className="flex items-center gap-2">
-            <div className="h-1.5 w-16 sm:w-20 overflow-hidden rounded-full bg-border/60">
+            <div className="h-2 w-16 sm:w-20 overflow-hidden rounded-full bg-white/60 dark:bg-white/10 p-0.5 border border-white/70 dark:border-white/10">
               <div
-                className={`h-full rounded-full transition-all duration-300 ${
-                  isAllDone ? 'bg-done' : 'bg-primary'
+                className={`h-full rounded-full transition-all duration-500 ease-out ${
+                  isAllDone ? 'bg-done shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-primary shadow-[0_0_8px_rgba(37,99,235,0.4)]'
                 }`}
                 style={{ width: `${percent}%` }}
               />
             </div>
-            <span className="text-[11px] font-medium text-text-muted">
+            <span className="text-[11px] font-semibold tabular-nums text-text-muted">
               {percent}%
             </span>
           </div>

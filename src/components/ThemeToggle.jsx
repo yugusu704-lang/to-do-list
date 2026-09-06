@@ -49,7 +49,7 @@ export default function ThemeToggle({ themeMode, onCycle }) {
       onClick={onCycle}
       aria-label={`当前主题：${label}，点击切换`}
       title={`当前主题：${label}（点击切换）`}
-      className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-border/80 bg-card text-text-secondary shadow-sm transition-all duration-150 hover:border-text-muted hover:text-text active:scale-90"
+      className="flex h-9 w-9 sm:h-9.5 sm:w-9.5 items-center justify-center rounded-2xl border border-border/70 bg-card/80 text-text-secondary shadow-2xs transition-all duration-150 hover:border-border hover:text-text hover:bg-card active:scale-90 backdrop-blur-xs"
     >
       {themeMode === 'light' && <SunIcon />}
       {themeMode === 'dark' && <MoonIcon />}

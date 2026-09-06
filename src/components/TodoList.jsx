@@ -90,11 +90,17 @@ export default function TodoList({ todos, filter, hasOtherContent = false, onTog
   const groups = groupByDueDate(filtered);
 
   return (
-    <div className="flex flex-1 flex-col gap-4">
+    <div className="flex flex-1 flex-col gap-5">
       {Object.entries(groups).map(([date, items]) => (
         <div key={date} className="flex flex-col gap-2">
-          <div className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-text-muted">
-            {date}
+          <div className="flex items-center gap-2 px-1 pt-1 pb-0.5">
+            <span className="text-[12px] font-bold uppercase tracking-wider text-text-muted">
+              {date}
+            </span>
+            <div className="h-px flex-1 bg-border/40" />
+            <span className="text-[11px] font-medium text-text-muted tabular-nums">
+              {items.length}
+            </span>
           </div>
           <div className="flex flex-col gap-2">
             {items.map((todo) => (
