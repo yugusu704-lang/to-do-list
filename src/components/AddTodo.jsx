@@ -37,7 +37,7 @@ function BellIcon({ className = 'w-3.5 h-3.5' }) {
 }
 
 // 添加任务表单组件（支持 ref 转发，供 widget 深度链接聚焦输入框）
-const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
+const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
   const [text, setText] = useState('');
   const [dueAt, setDueAt] = useState('');
   const [location, setLocation] = useState('');
@@ -67,19 +67,34 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
     setShowLocation(false);
   };
 
+  const triggerHaptic = () => {
+    if (typeof window !== 'undefined' && window.navigator && typeof window.navigator.vibrate === 'function') {
+      try {
+        window.navigator.vibrate(10);
+      } catch {}
+    }
+  };
+
   const toggleRoutine = () => {
+    triggerHaptic();
     const next = !isRoutine;
     setIsRoutine(next);
     if (next) setIsTimed(false);
   };
 
   const toggleTimed = () => {
+    triggerHaptic();
     const next = !isTimed;
     setIsTimed(next);
     if (next) {
       setIsRoutine(false);
       setHasReminder(true);
     }
+  };
+
+  const handleToggleReminder = () => {
+    triggerHaptic();
+    setHasReminder(!hasReminder);
   };
 
   const handleOpenNotificationSettings = async () => {
@@ -96,8 +111,72 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
       ? '添加阶段时限任务 (如: 9月15日前完成期末论文)...'
       : '添加新任务...';
 
+  const isTomoe = themeMode === 'tomoe';
+  const isPop = themeMode === 'pop';
+
+  // 悬浮式 FloatingNavigationCapsule (和风淡绿底板 + 1px 抹茶微边框 + 32dp 圆角)
+  const containerClasses = isTomoe
+    ? 'mx-3 sm:mx-4 mb-3 sm:mb-4 rounded-[32px] border border-[#DCE8DC] bg-[#EDF3EC]/95 shadow-[0_8px_24px_rgba(52,101,56,0.08)] backdrop-blur-md px-4 sm:px-5 py-3.5 transition-all duration-300'
+    : isPop
+      ? 'border-t-2 border-[#2A2C2E] bg-card px-4 sm:px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] shadow-[0_-2px_0px_#2A2C2E]'
+      : 'border-t border-border/80 bg-card/40 backdrop-blur-md px-4 sm:px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]';
+
+  const inputClasses = isTomoe
+    ? 'h-11 rounded-2xl border border-[#DCE8DC] bg-white/90 px-4 text-[14px] text-[#2C2C2A] placeholder-[#9E9D95] outline-none transition-all duration-200 focus:border-[#346538] focus:shadow-[0_0_0_3px_rgba(52,101,56,0.12)]'
+    : isPop
+      ? 'h-11 rounded-xl border-2 border-[#2A2C2E] bg-white px-4 text-[14px] font-medium text-[#2A2C2E] placeholder-[#7A7E82] outline-none shadow-[2px_2px_0px_#2A2C2E] transition-all duration-200 focus:border-[#E26D5C]'
+      : 'h-11 rounded-xl border border-border bg-card px-4 text-[14px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]';
+
+  const timedBtnClasses = isTomoe
+    ? isTimed
+      ? 'border border-[#DCE8DC] bg-white text-[#346538] font-semibold shadow-[0_2px_6px_rgba(52,101,56,0.12)] rounded-full'
+      : 'border border-[#DCE8DC]/80 bg-[#EDF3EC] text-[#6E6D67] hover:bg-white/60 rounded-full'
+    : isPop
+      ? isTimed
+        ? 'border-2 border-[#2A2C2E] bg-[#F2B84B] text-[#2A2C2E] font-bold shadow-[2px_2px_0px_#2A2C2E] rounded-xl'
+        : 'border-2 border-[#2A2C2E] bg-card text-text shadow-[1px_1px_0px_#2A2C2E] rounded-xl'
+      : isTimed
+        ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/10 dark:text-amber-400 font-medium shadow-xs rounded-xl'
+        : 'border-border bg-card text-text-muted hover:border-text-muted rounded-xl';
+
+  const reminderBtnClasses = isTomoe
+    ? hasReminder
+      ? 'border border-[#DCE8DC] bg-white text-[#346538] font-semibold shadow-[0_2px_6px_rgba(52,101,56,0.12)] rounded-full'
+      : 'border border-[#DCE8DC]/80 bg-[#EDF3EC] text-[#6E6D67] line-through opacity-70 rounded-full'
+    : isPop
+      ? hasReminder
+        ? 'border-2 border-[#2A2C2E] bg-[#E26D5C] text-white font-bold shadow-[2px_2px_0px_#2A2C2E] rounded-xl'
+        : 'border-2 border-[#2A2C2E] bg-card text-text-muted line-through opacity-70 shadow-[1px_1px_0px_#2A2C2E] rounded-xl'
+      : hasReminder
+        ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs rounded-xl'
+        : 'border-border bg-card text-text-muted line-through opacity-70 hover:border-text-muted rounded-xl';
+
+  const routineBtnClasses = isTomoe
+    ? isRoutine
+      ? 'border border-[#DCE8DC] bg-white text-[#346538] font-semibold shadow-[0_2px_6px_rgba(52,101,56,0.12)] rounded-full'
+      : 'border border-[#DCE8DC]/80 bg-[#EDF3EC] text-[#6E6D67] hover:bg-white/60 rounded-full'
+    : isPop
+      ? isRoutine
+        ? 'border-2 border-[#2A2C2E] bg-[#73A580] text-white font-bold shadow-[2px_2px_0px_#2A2C2E] rounded-xl'
+        : 'border-2 border-[#2A2C2E] bg-card text-text shadow-[1px_1px_0px_#2A2C2E] rounded-xl'
+      : isRoutine
+        ? 'border-primary bg-primary/10 text-primary font-medium shadow-xs rounded-xl'
+        : 'border-border bg-card text-text-muted hover:border-text-muted rounded-xl';
+
+  const locationBtnClasses = isTomoe
+    ? 'flex h-10 flex-1 items-center justify-center rounded-full border border-[#DCE8DC] bg-[#EDF3EC] text-[13px] text-[#6E6D67] transition-all duration-200 hover:bg-white/60 active:scale-[0.97]'
+    : isPop
+      ? 'flex h-10 flex-1 items-center justify-center rounded-xl border-2 border-[#2A2C2E] bg-card text-[13px] font-bold text-text shadow-[1px_1px_0px_#2A2C2E] transition-all duration-200 hover:border-[#2A2C2E] active:translate-x-[1px] active:translate-y-[1px]'
+      : 'flex h-10 flex-1 items-center justify-center rounded-xl border border-border bg-card text-[13px] text-text-muted transition-all duration-200 hover:border-text-muted active:scale-[0.97]';
+
+  const submitBtnClasses = isTomoe
+    ? 'h-11 rounded-[24px] bg-[#346538] hover:bg-[#2B542F] text-[15px] font-semibold text-white shadow-[0_4px_12px_rgba(52,101,56,0.2)] transition-all duration-150 active:scale-[0.97]'
+    : isPop
+      ? 'h-11 rounded-xl bg-[#2A2C2E] hover:bg-[#1A1C1E] text-[15px] font-bold text-white border-2 border-[#2A2C2E] shadow-[2px_2px_0px_#2A2C2E] transition-all duration-150 active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_#2A2C2E]'
+      : 'h-11 rounded-xl bg-btn-main text-[15px] font-medium text-white transition-all duration-150 hover:bg-btn-main-hover active:scale-[0.97]';
+
   return (
-    <div className="border-t border-border/80 bg-card/40 backdrop-blur-md px-4 sm:px-5 pt-3 pb-[max(16px,env(safe-area-inset-bottom))]">
+    <div className={containerClasses}>
       <form onSubmit={handleSubmit} className="flex flex-col gap-2.5">
         {/* 任务内容输入 */}
         <input
@@ -107,7 +186,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
           onChange={(e) => setText(e.target.value)}
           placeholder={placeholderText}
           autoComplete="off"
-          className="h-11 rounded-xl border border-border bg-card px-4 text-[14px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]"
+          className={inputClasses}
         />
 
         {/* 日期按钮 + 时限按钮 + 每日必做 + 地点按钮 */}
@@ -120,11 +199,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
             aria-label="阶段时限"
             aria-pressed={isTimed}
             onClick={toggleTimed}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
-              isTimed
-                ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/10 dark:text-amber-400 font-medium shadow-xs'
-                : 'border-border bg-card text-text-muted hover:border-text-muted'
-            }`}
+            className={`flex h-10 items-center justify-center gap-1.5 px-3 border text-[13px] transition-all duration-200 active:scale-[0.97] ${timedBtnClasses}`}
           >
             <HourglassIcon />
             <span>时限</span>
@@ -136,12 +211,8 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
               type="button"
               aria-label="提前3天提醒"
               aria-pressed={hasReminder}
-              onClick={() => setHasReminder(!hasReminder)}
-              className={`flex h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl border text-[12px] sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${
-                hasReminder
-                  ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs'
-                  : 'border-border bg-card text-text-muted line-through opacity-70 hover:border-text-muted'
-              }`}
+              onClick={handleToggleReminder}
+              className={`flex h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 border text-[12px] sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${reminderBtnClasses}`}
             >
               <BellIcon />
               <span>3天前提醒</span>
@@ -154,11 +225,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
             aria-label="每日必做"
             aria-pressed={isRoutine}
             onClick={toggleRoutine}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
-              isRoutine
-                ? 'border-primary bg-primary/10 text-primary font-medium shadow-xs'
-                : 'border-border bg-card text-text-muted hover:border-text-muted'
-            }`}
+            className={`flex h-10 items-center justify-center gap-1.5 px-3 border text-[13px] transition-all duration-200 active:scale-[0.97] ${routineBtnClasses}`}
           >
             <RepeatIcon />
             <span>每日</span>
@@ -172,13 +239,18 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
               placeholder="输入地点..."
               autoFocus
               autoComplete="off"
-              className="h-10 flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]"
+              className={isTomoe
+                ? 'h-10 flex-1 rounded-full border border-[#DCE8DC] bg-white px-3 text-[13px] text-[#2C2C2A] outline-none transition-all duration-200 focus:border-[#346538]'
+                : isPop
+                  ? 'h-10 flex-1 rounded-xl border-2 border-[#2A2C2E] bg-white px-3 text-[13px] text-[#2A2C2E] outline-none shadow-[2px_2px_0px_#2A2C2E] transition-all duration-200 focus:border-[#E26D5C]'
+                  : 'h-10 flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]'
+              }
             />
           ) : (
             <button
               type="button"
               onClick={() => setShowLocation(true)}
-              className="flex h-10 flex-1 items-center justify-center rounded-xl border border-border bg-card text-[13px] text-text-muted transition-all duration-200 hover:border-text-muted active:scale-[0.97]"
+              className={locationBtnClasses}
             >
               地点
             </button>
@@ -202,7 +274,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
         {/* 添加按钮 */}
         <button
           type="submit"
-          className="h-11 rounded-xl bg-btn-main text-[15px] font-medium text-white transition-all duration-150 hover:bg-btn-main-hover active:scale-[0.97]"
+          className={submitBtnClasses}
         >
           {isRoutine ? '添加每日必做' : isTimed ? '添加时限任务' : '添加'}
         </button>

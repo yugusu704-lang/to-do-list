@@ -25,39 +25,76 @@ public class TodoWidgetTheme {
     public static final int COLOR_DARK_TEXT_PRIMARY = 0xFFF4F4F5;
     public static final int COLOR_DARK_TEXT_SECONDARY = 0xFFA1A1AA;
 
+    // 巴川纸暖骨白配色
+    public static final int COLOR_TOMOE_TEXT_PRIMARY = 0xFF2C2C2A;
+    public static final int COLOR_TOMOE_TEXT_SECONDARY = 0xFF6E6D67;
+
+    // 低饱和波普风配色
+    public static final int COLOR_POP_TEXT_PRIMARY = 0xFF2A2C2E;
+    public static final int COLOR_POP_TEXT_SECONDARY = 0xFF4A4D50;
+
     /**
-     * 判断小组件当前应采用深色还是浅色模式：
-     * - "dark" -> 深色
-     * - "light" -> 浅色
-     * - "system" (默认) -> 读取 Android 系统 UI mode
+     * 获取小组件解析后的当前主题模式 ("light", "dark", "tomoe", "pop")
      */
-    public static boolean isDarkMode(Context context) {
+    public static String getResolvedThemeMode(Context context) {
         SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         String mode = prefs.getString(KEY_THEME_MODE, "system");
-        if ("dark".equalsIgnoreCase(mode)) {
-            return true;
-        } else if ("light".equalsIgnoreCase(mode)) {
-            return false;
+        if ("dark".equalsIgnoreCase(mode) || "tomoe".equalsIgnoreCase(mode) || "pop".equalsIgnoreCase(mode) || "light".equalsIgnoreCase(mode)) {
+            return mode.toLowerCase();
         } else {
             int nightMode = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-            return nightMode == Configuration.UI_MODE_NIGHT_YES;
+            return (nightMode == Configuration.UI_MODE_NIGHT_YES) ? "dark" : "light";
         }
+    }
+
+    /**
+     * 判断小组件当前是否为深色模式
+     */
+    public static boolean isDarkMode(Context context) {
+        return "dark".equals(getResolvedThemeMode(context));
     }
 
     /**
      * 为小组件外壳及 Header、Footer 渲染对应主题配色
      */
     public static void applyThemeToWidget(Context context, RemoteViews views) {
-        boolean isDark = isDarkMode(context);
-        int bgRes = isDark ? R.drawable.widget_bg_dark : R.drawable.widget_bg_light;
-        int textPrimary = isDark ? COLOR_DARK_TEXT_PRIMARY : COLOR_LIGHT_TEXT_PRIMARY;
-        int textSecondary = isDark ? COLOR_DARK_TEXT_SECONDARY : COLOR_LIGHT_TEXT_SECONDARY;
+        String theme = getResolvedThemeMode(context);
+        int bgRes;
+        int textPrimary;
+        int textSecondary;
+        int addIcon;
+
+        switch (theme) {
+            case "dark":
+                bgRes = R.drawable.widget_bg_dark;
+                textPrimary = COLOR_DARK_TEXT_PRIMARY;
+                textSecondary = COLOR_DARK_TEXT_SECONDARY;
+                addIcon = R.drawable.ic_widget_add_dark;
+                break;
+            case "tomoe":
+                bgRes = R.drawable.widget_bg_tomoe;
+                textPrimary = COLOR_TOMOE_TEXT_PRIMARY;
+                textSecondary = COLOR_TOMOE_TEXT_SECONDARY;
+                addIcon = R.drawable.ic_widget_add_light;
+                break;
+            case "pop":
+                bgRes = R.drawable.widget_bg_pop;
+                textPrimary = COLOR_POP_TEXT_PRIMARY;
+                textSecondary = COLOR_POP_TEXT_SECONDARY;
+                addIcon = R.drawable.ic_widget_add_light;
+                break;
+            case "light":
+            default:
+                bgRes = R.drawable.widget_bg_light;
+                textPrimary = COLOR_LIGHT_TEXT_PRIMARY;
+                textSecondary = COLOR_LIGHT_TEXT_SECONDARY;
+                addIcon = R.drawable.ic_widget_add_light;
+                break;
+        }
 
         views.setInt(R.id.widget_root, "setBackgroundResource", bgRes);
         views.setTextColor(R.id.widget_empty, textSecondary);
         views.setTextColor(R.id.widget_footer, textSecondary);
-
-        int addIcon = isDark ? R.drawable.ic_widget_add_dark : R.drawable.ic_widget_add_light;
         views.setImageViewResource(R.id.widget_btn_add, addIcon);
     }
 
@@ -65,9 +102,30 @@ public class TodoWidgetTheme {
      * 为单条任务列表项渲染对应主题配色
      */
     public static void applyThemeToTaskItem(Context context, RemoteViews views, Float animAlpha) {
-        boolean isDark = isDarkMode(context);
-        int textPrimary = isDark ? COLOR_DARK_TEXT_PRIMARY : COLOR_LIGHT_TEXT_PRIMARY;
-        int textSecondary = isDark ? COLOR_DARK_TEXT_SECONDARY : COLOR_LIGHT_TEXT_SECONDARY;
+        String theme = getResolvedThemeMode(context);
+        int textPrimary;
+        int textSecondary;
+        boolean isDark = "dark".equals(theme);
+
+        switch (theme) {
+            case "dark":
+                textPrimary = COLOR_DARK_TEXT_PRIMARY;
+                textSecondary = COLOR_DARK_TEXT_SECONDARY;
+                break;
+            case "tomoe":
+                textPrimary = COLOR_TOMOE_TEXT_PRIMARY;
+                textSecondary = COLOR_TOMOE_TEXT_SECONDARY;
+                break;
+            case "pop":
+                textPrimary = COLOR_POP_TEXT_PRIMARY;
+                textSecondary = COLOR_POP_TEXT_SECONDARY;
+                break;
+            case "light":
+            default:
+                textPrimary = COLOR_LIGHT_TEXT_PRIMARY;
+                textSecondary = COLOR_LIGHT_TEXT_SECONDARY;
+                break;
+        }
 
         views.setTextColor(R.id.task_text, textPrimary);
         views.setTextColor(R.id.task_time, textSecondary);

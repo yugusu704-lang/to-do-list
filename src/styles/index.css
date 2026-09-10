@@ -34,6 +34,42 @@
   --shadow-card-hover: 0 3px 10px rgba(0,0,0,0.4);
 }
 
+/* 日式巴川纸暖骨白主题 */
+[data-theme="tomoe"] {
+  --color-bg: #F7F6F3;
+  --color-card: #FFFFFF;
+  --color-text: #2C2C2A;
+  --color-text-secondary: #6E6D67;
+  --color-text-muted: #9E9D95;
+  --color-primary: #346538;
+  --color-done: #346538;
+  --color-danger: #C0392B;
+  --color-border: #E8E6DF;
+  --color-border-light: #F0EFEA;
+  --color-btn-main: #2C2C2A;
+  --color-btn-main-hover: #1C1C1A;
+  --shadow-card: 0 1px 3px rgba(44,44,42,0.04);
+  --shadow-card-hover: 0 2px 8px rgba(44,44,42,0.07);
+}
+
+/* 灰调复古波普风主题 */
+[data-theme="pop"] {
+  --color-bg: #FAF7F2;
+  --color-card: #FFFFFF;
+  --color-text: #2A2C2E;
+  --color-text-secondary: #4A4D50;
+  --color-text-muted: #7A7E82;
+  --color-primary: #E26D5C;
+  --color-done: #73A580;
+  --color-danger: #D9534F;
+  --color-border: #2A2C2E;
+  --color-border-light: #4A4D50;
+  --color-btn-main: #2A2C2E;
+  --color-btn-main-hover: #1A1C1E;
+  --shadow-card: 2px 2px 0px #2A2C2E;
+  --shadow-card-hover: 3px 3px 0px #2A2C2E;
+}
+
 @theme {
   --color-bg: var(--color-bg);
   --color-card: var(--color-card);
@@ -98,4 +134,24 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* 日式巴川纸主题细节 */
+[data-theme="tomoe"] {
+  letter-spacing: 0.015em;
+}
+
+/* 灰调波普风卡片与硬投影特征 */
+[data-theme="pop"] .bg-card {
+  border-width: 2px !important;
+  border-color: #2A2C2E !important;
+  box-shadow: 2px 2px 0px #2A2C2E !important;
+}
+
+[data-theme="pop"] button {
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+[data-theme="pop"] button:active {
+  transform: translate(1px, 1px) !important;
 }

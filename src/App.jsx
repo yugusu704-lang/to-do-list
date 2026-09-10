@@ -21,7 +21,7 @@ function msUntilMidnight() {
 // 根组件
 export default function App() {
   const { todos, lastRolloverCount, addTodo, updateTodo, toggleTodo, deleteTodo, clearCompleted, restoreTodos, resyncFromNative, rolloverOverdueTodos } = useTodos();
-  const { themeMode, cycleTheme } = useTheme();
+  const { themeMode, resolvedTheme, setTheme, cycleTheme } = useTheme();
   const [filter, setFilter] = useState('all');
   const [dayKey, setDayKey] = useState(() => new Date().toDateString());
   const [toast, setToast] = useState(null);
@@ -157,7 +157,7 @@ export default function App() {
                   <span className="whitespace-nowrap">清除 ({completedCount})</span>
                 </button>
               )}
-              <ThemeToggle themeMode={themeMode} onCycle={cycleTheme} />
+              <ThemeToggle themeMode={themeMode} onSelectTheme={setTheme} onCycle={cycleTheme} />
             </div>
           </div>
 
@@ -212,7 +212,7 @@ export default function App() {
         </div>
 
         {/* 底部输入栏 */}
-        <AddTodo ref={inputRef} onAdd={addTodo} />
+        <AddTodo ref={inputRef} onAdd={addTodo} themeMode={resolvedTheme} />
       </div>
 
       {/* 撤销 toast */}

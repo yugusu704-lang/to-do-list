@@ -8,6 +8,8 @@ function getSystemTheme() {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+export const THEME_MODES = ['system', 'light', 'dark', 'tomoe', 'pop'];
+
 export default function useTheme() {
   const [themeMode, setThemeMode] = useState(() => {
     try {
@@ -41,33 +43,48 @@ export default function useTheme() {
     TodoStorage.setThemeMode({ themeMode }).catch(() => {});
   }, [themeMode]);
 
-  // 应用 dark class 到 documentElement
+  // 应用 dark class 与 data-theme 属性到 documentElement
   useEffect(() => {
-    const isDark = resolvedTheme === 'dark';
-    if (isDark) {
-      document.documentElement.classList.add('dark');
+    const root = document.documentElement;
+    if (resolvedTheme === 'dark') {
+      root.classList.add('dark');
+      root.removeAttribute('data-theme');
+    } else if (resolvedTheme === 'tomoe' || resolvedTheme === 'pop') {
+      root.classList.remove('dark');
+      root.setAttribute('data-theme', resolvedTheme);
     } else {
-      document.documentElement.classList.remove('dark');
+      // light / default
+      root.classList.remove('dark');
+      root.removeAttribute('data-theme');
     }
 
     // 设置 Android 系统状态栏颜色
     const metaThemeColor = document.querySelector('meta[name="theme-color"]');
     if (metaThemeColor) {
-      metaThemeColor.setAttribute('content', isDark ? '#121214' : '#F5F0EB');
+      let color = '#F5F0EB';
+      if (resolvedTheme === 'dark') color = '#121214';
+      else if (resolvedTheme === 'tomoe') color = '#F7F6F3';
+      else if (resolvedTheme === 'pop') color = '#FAF7F2';
+      metaThemeColor.setAttribute('content', color);
     }
   }, [resolvedTheme]);
 
-  // 三态循环切换：system -> light -> dark -> system
+  // 直接设置指定主题
+  const setTheme = useCallback((next) => {
+    if (!THEME_MODES.includes(next)) return;
+    setThemeMode(next);
+    try {
+      localStorage.setItem(STORAGE_KEY, next);
+    } catch {
+      // 静默
+    }
+  }, []);
+
+  // 循环切换：system -> light -> dark -> tomoe -> pop -> system
   const cycleTheme = useCallback(() => {
     setThemeMode((prev) => {
-      let next;
-      if (prev === 'system') {
-        next = 'light';
-      } else if (prev === 'light') {
-        next = 'dark';
-      } else {
-        next = 'system';
-      }
+      const idx = THEME_MODES.indexOf(prev);
+      const next = THEME_MODES[(idx + 1) % THEME_MODES.length];
 
       try {
         localStorage.setItem(STORAGE_KEY, next);
@@ -81,6 +98,7 @@ export default function useTheme() {
   return {
     themeMode,
     resolvedTheme,
+    setTheme,
     cycleTheme,
   };
 }

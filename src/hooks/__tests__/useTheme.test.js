@@ -13,7 +13,7 @@ describe('useTheme', () => {
     expect(result.current.themeMode).toBe('system');
   });
 
-  test('三态循环切换：system -> light -> dark -> system', () => {
+  test('五态循环切换：system -> light -> dark -> tomoe -> pop -> system', () => {
     const { result } = renderHook(() => useTheme());
 
     act(() => {
@@ -33,8 +33,40 @@ describe('useTheme', () => {
     act(() => {
       result.current.cycleTheme();
     });
+    expect(result.current.themeMode).toBe('tomoe');
+    expect(localStorage.getItem('theme_mode')).toBe('tomoe');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('tomoe');
+
+    act(() => {
+      result.current.cycleTheme();
+    });
+    expect(result.current.themeMode).toBe('pop');
+    expect(localStorage.getItem('theme_mode')).toBe('pop');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('pop');
+
+    act(() => {
+      result.current.cycleTheme();
+    });
     expect(result.current.themeMode).toBe('system');
     expect(localStorage.getItem('theme_mode')).toBe('system');
+  });
+
+  test('通过 setTheme 直接切换到巴川纸与波普主题', () => {
+    const { result } = renderHook(() => useTheme());
+
+    act(() => {
+      result.current.setTheme('tomoe');
+    });
+    expect(result.current.themeMode).toBe('tomoe');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('tomoe');
+    expect(localStorage.getItem('theme_mode')).toBe('tomoe');
+
+    act(() => {
+      result.current.setTheme('pop');
+    });
+    expect(result.current.themeMode).toBe('pop');
+    expect(document.documentElement.getAttribute('data-theme')).toBe('pop');
+    expect(localStorage.getItem('theme_mode')).toBe('pop');
   });
 
   test('从 localStorage 恢复用户之前的主题设置', () => {
