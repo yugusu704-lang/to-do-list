@@ -1,7 +1,11 @@
 package com.example.todolist;
 
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.net.Uri;
+import android.os.Build;
+import android.provider.Settings;
 import com.example.todolist.db.TodoDbHelper;
 import com.example.todolist.widget.TodoWidgetProvider;
 import com.getcapacitor.JSObject;
@@ -89,5 +93,26 @@ public class TodoStoragePlugin extends Plugin {
         JSObject result = new JSObject();
         result.put("themeMode", themeMode);
         call.resolve(result);
+    }
+
+    // 跳转系统通知设置页，便于用户开启“悬浮通知/横幅通知”
+    @PluginMethod
+    public void openNotificationSettings(PluginCall call) {
+        try {
+            Context context = getContext();
+            Intent intent = new Intent();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                intent.setAction(Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                intent.putExtra(Settings.EXTRA_APP_PACKAGE, context.getPackageName());
+            } else {
+                intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                intent.setData(Uri.parse("package:" + context.getPackageName()));
+            }
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("Failed to open notification settings: " + e.getMessage());
+        }
     }
 }
