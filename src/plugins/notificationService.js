@@ -72,18 +72,21 @@ export function calculateReminderTime(dueAt, now = new Date()) {
   return null;
 }
 
+export const NOTIFICATION_CHANNEL_ID = 'todo_deadline_channel_v2';
+
 /**
  * 确保 Android 通知渠道已创建（仅 Android 原生环境有效）
+ * 采用 importance: 5 (MAX) 以支持手机桌面悬浮横幅弹窗 (Heads-up Notification)
  */
 export async function ensureNotificationChannel() {
   try {
     if (typeof LocalNotifications.createChannel === 'function') {
       await LocalNotifications.createChannel({
-        id: 'todo_deadline_channel',
+        id: NOTIFICATION_CHANNEL_ID,
         name: '时限任务提醒',
-        description: '阶段时限任务临近截止提醒通知',
-        importance: 4, // HIGH
-        visibility: 1, // PUBLIC
+        description: '阶段时限任务临近截止提醒通知（支持悬浮横幅弹窗）',
+        importance: 5, // MAX，支持浮动横幅提醒
+        visibility: 1, // PUBLIC，支持锁屏可见
         vibration: true,
       });
     }
@@ -131,7 +134,8 @@ export async function scheduleTodoReminder(todo, now = new Date()) {
           body: `「${todo.text}」距离截止还剩 3 天，请及时处理`,
           schedule: { at: reminderAt },
           extra: { todoId: todo.id },
-          channelId: 'todo_deadline_channel',
+          channelId: NOTIFICATION_CHANNEL_ID,
+          foreground: true,
         },
       ],
     });
@@ -219,7 +223,8 @@ export async function scheduleDevTestReminder(todo = null) {
           body: `「${targetTodo.text}」距离截止还剩 3 天，请及时处理`,
           schedule: { at },
           extra: { todoId: targetTodo.id },
-          channelId: 'todo_deadline_channel',
+          channelId: NOTIFICATION_CHANNEL_ID,
+          foreground: true,
         },
       ],
     });

@@ -5,6 +5,9 @@ import {
   scheduleTodoReminder,
   cancelTodoReminder,
   initNotificationListeners,
+  scheduleDevTestReminder,
+  ensureNotificationChannel,
+  NOTIFICATION_CHANNEL_ID,
 } from '../notificationService';
 import { LocalNotifications } from '@capacitor/local-notifications';
 
@@ -15,6 +18,7 @@ vi.mock('@capacitor/local-notifications', () => ({
     schedule: vi.fn(),
     cancel: vi.fn(),
     addListener: vi.fn(),
+    createChannel: vi.fn(),
   },
 }));
 
@@ -160,6 +164,8 @@ describe('notificationService', () => {
             title: '时限任务即将截止',
             body: expect.stringContaining('期末论文提交'),
             extra: { todoId: 'todo-timed-123' },
+            channelId: NOTIFICATION_CHANNEL_ID,
+            foreground: true,
           }),
         ],
       });
@@ -227,6 +233,50 @@ describe('notificationService', () => {
       if (typeof unsub === 'function') {
         unsub();
       }
+    });
+  });
+
+  describe('ensureNotificationChannel', () => {
+    it('creates notification channel with importance 5 and vibration enabled', async () => {
+      LocalNotifications.createChannel.mockResolvedValue();
+      await ensureNotificationChannel();
+
+      expect(LocalNotifications.createChannel).toHaveBeenCalledWith({
+        id: NOTIFICATION_CHANNEL_ID,
+        name: '时限任务提醒',
+        description: expect.stringContaining('悬浮横幅弹窗'),
+        importance: 5,
+        visibility: 1,
+        vibration: true,
+      });
+    });
+  });
+
+  describe('scheduleDevTestReminder', () => {
+    it('schedules a test notification 5 seconds in the future with channelId and foreground', async () => {
+      LocalNotifications.checkPermissions.mockResolvedValue({ display: 'granted' });
+      LocalNotifications.schedule.mockResolvedValue();
+
+      const res = await scheduleDevTestReminder({ id: 'test-1', text: 'Test' });
+      expect(res.success).toBe(true);
+      expect(LocalNotifications.schedule).toHaveBeenCalledWith({
+        notifications: [
+          expect.objectContaining({
+            id: hashStringToId('test-1'),
+            channelId: NOTIFICATION_CHANNEL_ID,
+            foreground: true,
+          }),
+        ],
+      });
+    });
+
+    it('returns error when permission is not granted', async () => {
+      LocalNotifications.checkPermissions.mockResolvedValue({ display: 'denied' });
+      LocalNotifications.requestPermissions.mockResolvedValue({ display: 'denied' });
+
+      const res = await scheduleDevTestReminder({ id: 'test-2', text: 'Test 2' });
+      expect(res.success).toBe(false);
+      expect(res.error).toBe('未授予通知权限');
     });
   });
 });

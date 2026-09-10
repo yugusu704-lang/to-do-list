@@ -1,5 +1,6 @@
 import { useState, forwardRef } from 'react';
 import DateButton from './DateButton';
+import TodoStorage from '../plugins/todoStorage';
 
 // 循环/刷新图标 SVG
 function RepeatIcon({ className = 'w-3.5 h-3.5' }) {
@@ -78,6 +79,14 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
     if (next) {
       setIsRoutine(false);
       setHasReminder(true);
+    }
+  };
+
+  const handleOpenNotificationSettings = async () => {
+    try {
+      await TodoStorage.openNotificationSettings();
+    } catch {
+      // 静默处理
     }
   };
 
@@ -175,6 +184,20 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
             </button>
           )}
         </div>
+
+        {/* 时限任务提醒小贴士 */}
+        {isTimed && hasReminder && (
+          <div className="flex items-center justify-between px-1 text-[11px] text-amber-900/80 dark:text-amber-300/80">
+            <span>⏰ 截止前3天早晨 09:00 将发送桌面横幅提醒</span>
+            <button
+              type="button"
+              onClick={handleOpenNotificationSettings}
+              className="font-medium text-amber-700 dark:text-amber-400 hover:underline"
+            >
+              悬浮权限设置 &gt;
+            </button>
+          </div>
+        )}
 
         {/* 添加按钮 */}
         <button

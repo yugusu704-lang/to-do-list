@@ -17,6 +17,10 @@ const TodoStorage = registerPlugin('TodoStorage', {
     getThemeMode: async () => ({
       themeMode: localStorage.getItem('theme_mode') || 'system',
     }),
+    openNotificationSettings: async () => {
+      // Web 环境下无系统通知设置，直接返回
+      return;
+    },
   },
 });
 

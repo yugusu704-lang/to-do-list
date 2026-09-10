@@ -122,5 +122,24 @@ describe('TimedSection', () => {
     const targetItem = document.getElementById('todo-item-t1');
     expect(targetItem).toHaveClass('ring-amber-500');
   });
+
+  test('展开后显示桌面横幅通知指引，点击权限设置触发 TodoStorage.openNotificationSettings', async () => {
+    render(
+      <TimedSection
+        todos={sampleTimedTodos}
+        onToggle={vi.fn()}
+        onDelete={vi.fn()}
+        onUpdate={vi.fn()}
+      />
+    );
+
+    // 展开
+    fireEvent.click(screen.getByRole('button', { name: /时限任务/ }));
+    expect(screen.getByText(/桌面横幅弹窗需开启系统「悬浮通知」/)).toBeInTheDocument();
+
+    const settingsBtn = screen.getByRole('button', { name: /权限设置/ });
+    expect(settingsBtn).toBeInTheDocument();
+    fireEvent.click(settingsBtn);
+  });
 });
 

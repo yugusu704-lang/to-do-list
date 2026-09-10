@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import TodoItem from './TodoItem';
+import TodoStorage from '../plugins/todoStorage';
 
 // 沙漏图标 SVG
 function HourglassIcon({ className = 'w-4 h-4' }) {
@@ -75,6 +76,14 @@ export default function TimedSection({
     return null;
   }
 
+  const handleOpenNotificationSettings = async () => {
+    try {
+      await TodoStorage.openNotificationSettings();
+    } catch {
+      // 静默处理
+    }
+  };
+
   // 排序：按 dueAt 升序排列（最紧急的排最前面）
   const sortedTodos = [...todos].sort((a, b) => {
     if (!a.dueAt) return 1;
@@ -131,6 +140,20 @@ export default function TimedSection({
         {/* 展开后的时限任务列表 */}
         {!isCollapsed && (
           <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-amber-700/15 dark:border-amber-500/15">
+            {/* 桌面悬浮横幅设置指引条 */}
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 px-3 py-1.5 text-xs text-amber-900/90 dark:text-amber-200 border border-amber-600/20 dark:border-amber-500/20 shadow-xs">
+              <span className="flex items-center gap-1.5 truncate">
+                <span className="shrink-0">🔔</span>
+                <span className="truncate">桌面横幅弹窗需开启系统「悬浮通知」</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleOpenNotificationSettings}
+                className="shrink-0 font-semibold text-amber-800 dark:text-amber-300 hover:underline active:opacity-75"
+              >
+                权限设置 &gt;
+              </button>
+            </div>
             {displayedTodos.length === 0 ? (
               <div className="py-4 text-center text-xs text-text-muted">
                 {filter === 'active' ? '没有未完成的时限任务' : filter === 'completed' ? '暂无已完成的时限任务' : '暂无时限任务'}

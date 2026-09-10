@@ -221,13 +221,26 @@ export default function App() {
             </span>
             <span className="font-semibold truncate">Dev 通知测试</span>
           </div>
-          <button
-            type="button"
-            onClick={handleDevTestNotification}
-            className="flex-shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 active:scale-95 px-2.5 py-1 text-xs font-semibold text-white transition-all shadow-xs"
-          >
-            🧪 5秒后发送测试通知
-          </button>
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <button
+              type="button"
+              onClick={async () => {
+                try {
+                  await TodoStorage.openNotificationSettings();
+                } catch {}
+              }}
+              className="rounded-lg border border-amber-600/40 bg-card/60 hover:bg-card px-2 py-1 text-xs font-medium text-amber-900 dark:text-amber-300 transition-all active:scale-95"
+            >
+              ⚙️ 权限设置
+            </button>
+            <button
+              type="button"
+              onClick={handleDevTestNotification}
+              className="rounded-lg bg-amber-600 hover:bg-amber-700 active:scale-95 px-2.5 py-1 text-xs font-semibold text-white transition-all shadow-xs"
+            >
+              🧪 5秒后发送测试通知
+            </button>
+          </div>
         </div>
 
         {/* 筛选栏 */}
