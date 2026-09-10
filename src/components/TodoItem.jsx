@@ -178,7 +178,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
           className="h-10 w-full rounded-lg border border-border bg-card px-3 text-[15px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
         />
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
           <DateButton value={editDueAt} onChange={setEditDueAt} />
 
           {/* 阶段时限开关胶囊 */}
@@ -194,14 +194,14 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
                 setEditHasReminder(true);
               }
             }}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+            className={`flex h-10 shrink-0 whitespace-nowrap items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl border text-xs sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${
               editIsTimed
                 ? 'border-orange-600 bg-orange-100 text-orange-950 dark:border-orange-500/80 dark:bg-orange-500/20 dark:text-orange-300 font-semibold shadow-xs'
                 : 'border-border bg-card text-text-muted hover:border-text-muted'
             }`}
           >
-            <HourglassIcon />
-            <span>时限</span>
+            <HourglassIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">时限</span>
           </button>
 
           {/* 编辑模式下的提前3天提醒切换 */}
@@ -211,14 +211,14 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
               aria-label="提前3天提醒"
               aria-pressed={editHasReminder}
               onClick={() => setEditHasReminder(!editHasReminder)}
-              className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+              className={`flex h-10 shrink-0 whitespace-nowrap items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl border text-xs sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${
                 editHasReminder
                   ? 'border-orange-600 bg-orange-100 text-orange-950 dark:border-orange-500/80 dark:bg-orange-500/20 dark:text-orange-300 font-semibold shadow-xs'
                   : 'border-border bg-card text-text-muted line-through opacity-70 hover:border-text-muted'
               }`}
             >
-              <BellIcon />
-              <span>3天前提醒</span>
+              <BellIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="whitespace-nowrap">3天前提醒</span>
             </button>
           )}
 
@@ -232,14 +232,14 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
               setEditIsRoutine(next);
               if (next) setEditIsTimed(false);
             }}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+            className={`flex h-10 shrink-0 whitespace-nowrap items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl border text-xs sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${
               editIsRoutine
                 ? 'border-primary bg-primary/10 text-primary font-medium shadow-xs'
                 : 'border-border bg-card text-text-muted hover:border-text-muted'
             }`}
           >
-            <RepeatIcon />
-            <span>每日</span>
+            <RepeatIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">每日</span>
           </button>
 
           <input
@@ -248,7 +248,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
             onChange={(e) => setEditLocation(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="地点 (可选)..."
-            className="h-10 min-w-[120px] flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
+            className="h-10 shrink-0 min-w-[110px] sm:min-w-[130px] rounded-xl border border-border bg-card px-3 text-xs sm:text-[13px] text-text outline-none focus:border-primary focus:shadow-[0_0_0_2px_rgba(37,99,235,0.15)]"
           />
         </div>
 

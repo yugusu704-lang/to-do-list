@@ -164,10 +164,10 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
         : 'border-border bg-card text-text-muted hover:border-text-muted rounded-xl';
 
   const locationBtnClasses = isTomoe
-    ? 'flex h-10 flex-1 items-center justify-center rounded-full border border-[#DCE8DC] bg-[#EDF3EC] text-[13px] text-[#6E6D67] transition-all duration-200 hover:bg-white/60 active:scale-[0.97]'
+    ? 'flex h-10 shrink-0 whitespace-nowrap items-center justify-center rounded-full border border-[#DCE8DC] bg-[#EDF3EC] px-3 text-xs sm:text-[13px] text-[#6E6D67] transition-all duration-200 hover:bg-white/60 active:scale-[0.97]'
     : isPop
-      ? 'flex h-10 flex-1 items-center justify-center rounded-xl border-2 border-[#2A2C2E] bg-card text-[13px] font-bold text-text shadow-[1px_1px_0px_#2A2C2E] transition-all duration-200 hover:border-[#2A2C2E] active:translate-x-[1px] active:translate-y-[1px]'
-      : 'flex h-10 flex-1 items-center justify-center rounded-xl border border-border bg-card text-[13px] text-text-muted transition-all duration-200 hover:border-text-muted active:scale-[0.97]';
+      ? 'flex h-10 shrink-0 whitespace-nowrap items-center justify-center rounded-xl border-2 border-[#2A2C2E] bg-card px-3 text-xs sm:text-[13px] font-bold text-text shadow-[1px_1px_0px_#2A2C2E] transition-all duration-200 hover:border-[#2A2C2E] active:translate-x-[1px] active:translate-y-[1px]'
+      : 'flex h-10 shrink-0 whitespace-nowrap items-center justify-center rounded-xl border border-border bg-card px-3 text-xs sm:text-[13px] text-text-muted transition-all duration-200 hover:border-text-muted active:scale-[0.97]';
 
   const submitBtnClasses = isTomoe
     ? 'h-11 rounded-[24px] bg-[#346538] hover:bg-[#2B542F] text-[15px] font-semibold text-white shadow-[0_4px_12px_rgba(52,101,56,0.2)] transition-all duration-150 active:scale-[0.97]'
@@ -189,8 +189,8 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
           className={inputClasses}
         />
 
-        {/* 日期按钮 + 时限按钮 + 每日必做 + 地点按钮 */}
-        <div className="flex gap-2">
+        {/* 日期按钮 + 时限按钮 + 提前3天 + 每日必做 + 地点按钮（支持无缝横向滚动，永不折行挤压） */}
+        <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar py-0.5">
           <DateButton value={dueAt} onChange={setDueAt} />
 
           {/* 阶段时限开关胶囊 */}
@@ -199,10 +199,10 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
             aria-label="阶段时限"
             aria-pressed={isTimed}
             onClick={toggleTimed}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 border text-[13px] transition-all duration-200 active:scale-[0.97] ${timedBtnClasses}`}
+            className={`flex h-10 shrink-0 whitespace-nowrap items-center justify-center gap-1.5 px-2.5 sm:px-3 border text-xs sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${timedBtnClasses}`}
           >
-            <HourglassIcon />
-            <span>时限</span>
+            <HourglassIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">时限</span>
           </button>
 
           {/* 提前3天提醒开关胶囊（仅在激活时限时呈现） */}
@@ -212,10 +212,10 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
               aria-label="提前3天提醒"
               aria-pressed={hasReminder}
               onClick={handleToggleReminder}
-              className={`flex h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 border text-[12px] sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${reminderBtnClasses}`}
+              className={`flex h-10 shrink-0 whitespace-nowrap items-center justify-center gap-1.5 px-2.5 sm:px-3 border text-xs sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${reminderBtnClasses}`}
             >
-              <BellIcon />
-              <span>3天前提醒</span>
+              <BellIcon className="w-3.5 h-3.5 shrink-0" />
+              <span className="whitespace-nowrap">3天前提醒</span>
             </button>
           )}
 
@@ -225,46 +225,62 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
             aria-label="每日必做"
             aria-pressed={isRoutine}
             onClick={toggleRoutine}
-            className={`flex h-10 items-center justify-center gap-1.5 px-3 border text-[13px] transition-all duration-200 active:scale-[0.97] ${routineBtnClasses}`}
+            className={`flex h-10 shrink-0 whitespace-nowrap items-center justify-center gap-1.5 px-2.5 sm:px-3 border text-xs sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${routineBtnClasses}`}
           >
-            <RepeatIcon />
-            <span>每日</span>
+            <RepeatIcon className="w-3.5 h-3.5 shrink-0" />
+            <span className="whitespace-nowrap">每日</span>
           </button>
 
           {showLocation ? (
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="输入地点..."
-              autoFocus
-              autoComplete="off"
-              className={isTomoe
-                ? 'h-10 flex-1 rounded-full border border-[#DCE8DC] bg-white px-3 text-[13px] text-[#2C2C2A] outline-none transition-all duration-200 focus:border-[#346538]'
-                : isPop
-                  ? 'h-10 flex-1 rounded-xl border-2 border-[#2A2C2E] bg-white px-3 text-[13px] text-[#2A2C2E] outline-none shadow-[2px_2px_0px_#2A2C2E] transition-all duration-200 focus:border-[#E26D5C]'
-                  : 'h-10 flex-1 rounded-xl border border-border bg-card px-3 text-[13px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]'
-              }
-            />
+            <div className="relative flex items-center shrink-0 min-w-[110px] sm:min-w-[140px]">
+              <input
+                type="text"
+                value={location}
+                onChange={(e) => setLocation(e.target.value)}
+                placeholder="输入地点..."
+                autoFocus
+                autoComplete="off"
+                className={isTomoe
+                  ? 'h-10 w-full rounded-full border border-[#DCE8DC] bg-white px-3 pr-6 text-xs sm:text-[13px] text-[#2C2C2A] outline-none transition-all duration-200 focus:border-[#346538]'
+                  : isPop
+                    ? 'h-10 w-full rounded-xl border-2 border-[#2A2C2E] bg-white px-3 pr-6 text-xs sm:text-[13px] text-[#2A2C2E] outline-none shadow-[2px_2px_0px_#2A2C2E] transition-all duration-200 focus:border-[#E26D5C]'
+                    : 'h-10 w-full rounded-xl border border-border bg-card px-3 pr-6 text-xs sm:text-[13px] text-text outline-none transition-all duration-200 focus:border-primary focus:shadow-[0_0_0_3px_rgba(37,99,235,0.08)]'
+                }
+              />
+              {location && (
+                <button
+                  type="button"
+                  onClick={() => setLocation('')}
+                  aria-label="清除地点"
+                  className="absolute right-2 text-text-muted hover:text-text text-xs"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           ) : (
             <button
               type="button"
               onClick={() => setShowLocation(true)}
               className={locationBtnClasses}
             >
-              地点
+              <span className="whitespace-nowrap">{location ? location : '地点'}</span>
             </button>
           )}
         </div>
 
         {/* 时限任务提醒小贴士 */}
-        {isTimed && hasReminder && (
-          <div className="flex items-center justify-between px-1 text-[11px] text-orange-950/80 dark:text-orange-300/80">
-            <span>⏰ 截止前3天早晨 09:00 将发送桌面横幅提醒</span>
+        {isTimed && (
+          <div className="flex items-center justify-between gap-2 px-1 text-[11px] text-orange-950/80 dark:text-orange-300/80">
+            <span className="truncate">
+              {hasReminder
+                ? '⏰ 截止前3天早晨 09:00 将发送桌面横幅提醒'
+                : '⏰ 已关闭提前3天桌面横幅提醒'}
+            </span>
             <button
               type="button"
               onClick={handleOpenNotificationSettings}
-              className="font-semibold text-orange-700 dark:text-orange-400 hover:underline"
+              className="shrink-0 font-semibold text-orange-700 dark:text-orange-400 hover:underline"
             >
               悬浮权限设置 &gt;
             </button>

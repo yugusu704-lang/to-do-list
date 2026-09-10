@@ -87,15 +87,36 @@
   --shadow-card-hover: var(--shadow-card-hover);
 }
 
+:root {
+  --font-sans: 'Outfit', -apple-system, BlinkMacSystemFont,
+    'HarmonyOS Sans SC', 'HarmonyOS Sans', 'MiSans', 'OPPO Sans', 'OPlusSans', 'vivo Sans',
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei',
+    'Noto Sans SC', 'Noto Sans CJK SC', 'Droid Sans Fallback',
+    system-ui, sans-serif;
+}
+
 body {
-  font-family: 'Outfit', -apple-system, system-ui, 'Segoe UI', sans-serif;
+  font-family: var(--font-sans);
   background-color: var(--color-bg);
   color: var(--color-text);
   margin: 0;
   padding: 0;
-  line-height: 1.6;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: "palt";
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+/* 隐藏横向滚动条但保留平滑滚动体验 */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* Ripple 效果 */

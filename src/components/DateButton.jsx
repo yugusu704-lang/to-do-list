@@ -1,9 +1,9 @@
 import { useRef, useCallback } from 'react';
 
 // 日历图标 SVG
-function CalendarIcon() {
+function CalendarIcon({ className = 'w-4 h-4 shrink-0' }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
       <line x1="16" y1="2" x2="16" y2="6" />
       <line x1="8" y1="2" x2="8" y2="6" />
@@ -60,7 +60,7 @@ export default function DateButton({ value, onChange }) {
   const label = formatDateLabel(value);
 
   return (
-    <div className="relative flex-1">
+    <div className="relative shrink-0 min-w-[96px] sm:min-w-[110px]">
       <input
         ref={inputRef}
         type="datetime-local"
@@ -73,12 +73,12 @@ export default function DateButton({ value, onChange }) {
       <button
         type="button"
         onClick={handleClick}
-        className={`flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-border bg-card text-[13px] transition-all duration-200 hover:border-text-muted active:scale-[0.97] ${
-          label ? 'text-text' : 'text-text-muted'
+        className={`flex h-10 w-full shrink-0 whitespace-nowrap items-center justify-center gap-1.5 rounded-xl border border-border bg-card px-2.5 sm:px-3 text-xs sm:text-[13px] transition-all duration-200 hover:border-text-muted active:scale-[0.97] ${
+          label ? 'text-text font-medium' : 'text-text-muted'
         }`}
       >
         <CalendarIcon />
-        <span>{label || '添加日期'}</span>
+        <span className="whitespace-nowrap truncate">{label || '添加日期'}</span>
       </button>
     </div>
   );
