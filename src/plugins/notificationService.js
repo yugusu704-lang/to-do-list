@@ -185,3 +185,47 @@ export async function initNotificationListeners(onNotificationClick) {
     return () => {};
   }
 }
+
+/**
+ * DEV 测试专用：5 秒后发送测试提醒通知（方便真机即时测试）
+ * @param {Object} [todo]
+ * @returns {Promise<{success: boolean, at?: Date, todoId?: string, error?: string}>}
+ */
+export async function scheduleDevTestReminder(todo = null) {
+  const targetTodo = todo || {
+    id: 'dev-test-task-1',
+    text: '测试时限任务',
+  };
+
+  try {
+    let perm = await LocalNotifications.checkPermissions();
+    if (perm.display !== 'granted') {
+      perm = await LocalNotifications.requestPermissions();
+    }
+    if (perm.display !== 'granted') {
+      return { success: false, error: '未授予通知权限' };
+    }
+
+    await ensureNotificationChannel();
+
+    const id = hashStringToId(targetTodo.id);
+    const at = new Date(Date.now() + 5000); // 5 秒后推送
+
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id,
+          title: '【测试】时限任务即将截止',
+          body: `「${targetTodo.text}」距离截止还剩 3 天，请及时处理`,
+          schedule: { at },
+          extra: { todoId: targetTodo.id },
+          channelId: 'todo_deadline_channel',
+        },
+      ],
+    });
+
+    return { success: true, at, todoId: targetTodo.id };
+  } catch (e) {
+    return { success: false, error: e.message || '调度异常' };
+  }
+}

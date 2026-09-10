@@ -9,7 +9,7 @@ import DailyRoutineSection from './components/DailyRoutineSection';
 import TimedSection from './components/TimedSection';
 import AddTodo from './components/AddTodo';
 import ThemeToggle from './components/ThemeToggle';
-import { initNotificationListeners } from './plugins/notificationService';
+import { initNotificationListeners, scheduleDevTestReminder } from './plugins/notificationService';
 
 // 计算距离下一个 0 点的毫秒数
 function msUntilMidnight() {
@@ -112,6 +112,37 @@ export default function App() {
     setToast(null);
   };
 
+  // DEV 测试模式：一键预约 5 秒后推送测试通知
+  const handleDevTestNotification = async () => {
+    let target = timedTodos.find((t) => !t.completed);
+    if (!target) {
+      // 自动创建一个演示时限任务以便落地高亮
+      addTodo({
+        text: '演示时限任务（9月15日截止）',
+        dueAt: '2026-09-15T18:00',
+        isTimed: true,
+        hasReminder: true,
+      });
+      target = {
+        id: 'dev-demo-task',
+        text: '演示时限任务（9月15日截止）',
+      };
+    }
+
+    const res = await scheduleDevTestReminder(target);
+    if (res.success) {
+      setToast({
+        message: '🔔 已预约 5 秒后推送！请在 5 秒内将 App 退至后台或锁屏查看',
+        undoable: false,
+      });
+    } else {
+      setToast({
+        message: `推送预约失败: ${res.error}`,
+        undoable: false,
+      });
+    }
+  };
+
   // 顺延通知 toast（无撤销按钮，3 秒自动消失）
   useEffect(() => {
     if (lastRolloverCount > 0) {
@@ -139,9 +170,14 @@ export default function App() {
         <header className="flex flex-col gap-2.5 px-4 sm:px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-3">
           {/* 第一行：大标题 + 右侧操作组 */}
           <div className="flex items-center justify-between gap-2">
-            <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-text leading-tight">
-              待办清单
-            </h1>
+            <div className="flex items-baseline gap-2">
+              <h1 className="text-[26px] sm:text-[28px] font-bold tracking-tight text-text leading-tight">
+                待办清单
+              </h1>
+              <span className="rounded-md bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 px-1.5 py-0.5 text-[11px] font-bold tracking-wider uppercase">
+                Dev
+              </span>
+            </div>
 
             <div className="flex flex-shrink-0 items-center gap-2">
               {completedCount > 0 && (
@@ -175,6 +211,24 @@ export default function App() {
             </div>
           </div>
         </header>
+
+        {/* Dev 测试版专属：即时通知测试栏 */}
+        <div className="mx-4 sm:mx-5 mb-2.5 flex items-center justify-between gap-2 rounded-xl border border-amber-600/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300 shadow-xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="flex h-2 w-2 relative flex-shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+            </span>
+            <span className="font-semibold truncate">Dev 通知测试</span>
+          </div>
+          <button
+            type="button"
+            onClick={handleDevTestNotification}
+            className="flex-shrink-0 rounded-lg bg-amber-600 hover:bg-amber-700 active:scale-95 px-2.5 py-1 text-xs font-semibold text-white transition-all shadow-xs"
+          >
+            🧪 5秒后发送测试通知
+          </button>
+        </div>
 
         {/* 筛选栏 */}
         <FilterTabs currentFilter={filter} onFilterChange={setFilter} />
