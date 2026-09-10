@@ -107,7 +107,7 @@ export default function useTodos() {
   }, [todos]);
 
   // 添加任务
-  const addTodo = useCallback(({ text, dueAt = null, location = null, isRoutine = false }) => {
+  const addTodo = useCallback(({ text, dueAt = null, location = null, isRoutine = false, isTimed = false }) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     const now = Date.now();
@@ -125,6 +125,7 @@ export default function useTodos() {
       notes: null,
       deletedAt: null,
       isRoutine: Boolean(isRoutine),
+      isTimed: Boolean(isTimed),
       lastCompletedDate: null,
     };
     setTodos((prev) => [newTodo, ...prev]);
@@ -151,8 +152,8 @@ export default function useTodos() {
     );
   }, []);
 
-  // 修改任务内容、时间、地点、备注、习惯属性等
-  const updateTodo = useCallback(({ id, text, dueAt = null, location = null, notes = null, priority = 0, isRoutine }) => {
+  // 修改任务内容、时间、地点、备注、习惯与时限属性等
+  const updateTodo = useCallback(({ id, text, dueAt = null, location = null, notes = null, priority = 0, isRoutine, isTimed }) => {
     const trimmed = typeof text === 'string' ? text.trim() : '';
     if (!trimmed) return;
     const now = Date.now();
@@ -167,6 +168,7 @@ export default function useTodos() {
               notes: notes?.trim() || null,
               priority: typeof priority === 'number' ? priority : todo.priority,
               isRoutine: typeof isRoutine === 'boolean' ? isRoutine : Boolean(todo.isRoutine),
+              isTimed: typeof isTimed === 'boolean' ? isTimed : Boolean(todo.isTimed),
               updatedAt: now,
             }
           : todo

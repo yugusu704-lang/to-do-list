@@ -54,7 +54,6 @@ public class TodoWidgetTheme {
         int textSecondary = isDark ? COLOR_DARK_TEXT_SECONDARY : COLOR_LIGHT_TEXT_SECONDARY;
 
         views.setInt(R.id.widget_root, "setBackgroundResource", bgRes);
-        views.setTextColor(R.id.widget_title, textPrimary);
         views.setTextColor(R.id.widget_empty, textSecondary);
         views.setTextColor(R.id.widget_footer, textSecondary);
 

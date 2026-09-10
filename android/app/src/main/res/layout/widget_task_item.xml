@@ -73,6 +73,28 @@
                 android:textSize="12sp"
                 android:visibility="gone" />
 
+            <!-- 阶段时限专属徽标 -->
+            <TextView
+                android:id="@+id/task_timed_badge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="时限"
+                android:textColor="@color/widget_timed_badge_text"
+                android:textSize="11sp"
+                android:drawableStart="@drawable/ic_hourglass_12dp"
+                android:drawablePadding="2dp"
+                android:visibility="gone" />
+
+            <!-- 时限与时间的间隔点 -->
+            <TextView
+                android:id="@+id/task_timed_separator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" • "
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
             <!-- 时间 -->
             <TextView
                 android:id="@+id/task_time"

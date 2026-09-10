@@ -1,0 +1,6 @@
+# DevFlow Project Configuration
+project_name: "to-do-list"
+engine_path: "C:\Users\long\.gemini\antigravity\scratch\rigorous-dev-workflow"
+ocs:
+  identity: "DevFlow Engineer for to-do-list"
+  hard_char_limit: 24400

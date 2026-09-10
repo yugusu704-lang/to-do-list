@@ -22,24 +22,29 @@ import java.util.Locale;
 public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFactory {
 
     private Context context;
+    private int widgetId;
     private List<TodoItem> todoItems = new ArrayList<>();
     private static final String EXTRA_TODO_ID = "todo_id";
 
     public TodoWidgetViewsFactory(Context context, Intent intent) {
         this.context = context;
+        if (intent != null) {
+            this.widgetId = intent.getIntExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_ID,
+                    android.appwidget.AppWidgetManager.INVALID_APPWIDGET_ID);
+        }
     }
 
     // ---- RemoteViewsFactory 生命周期 ----
 
     @Override
     public void onCreate() {
-        loadTodayTodos();
+        loadData();
     }
 
     @Override
     public void onDataSetChanged() {
-        // 每次小部件刷新时重新加载数据
-        loadTodayTodos();
+        // 每次小部件刷新或切换 Tab 时重新加载数据
+        loadData();
     }
 
     @Override
@@ -67,25 +72,31 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         v.setTextViewText(R.id.task_text, item.text);
 
         // 每日习惯专属徽标
-        if (item.isRoutine) {
-            v.setViewVisibility(R.id.task_routine_badge, android.view.View.VISIBLE);
-        } else {
-            v.setViewVisibility(R.id.task_routine_badge, android.view.View.GONE);
-        }
+        v.setViewVisibility(R.id.task_routine_badge, item.isRoutine ? android.view.View.VISIBLE : android.view.View.GONE);
+
+        // 阶段时限专属徽标
+        v.setViewVisibility(R.id.task_timed_badge, item.isTimed ? android.view.View.VISIBLE : android.view.View.GONE);
 
         // 时间
         boolean hasTime = item.dueAt > 0;
         if (hasTime) {
-            SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
-            v.setTextViewText(R.id.task_time, sdf.format(new Date(item.dueAt)));
+            if (item.isTimed) {
+                SimpleDateFormat sdf = new SimpleDateFormat("M月d日", Locale.getDefault());
+                v.setTextViewText(R.id.task_time, sdf.format(new Date(item.dueAt)) + " 截止");
+            } else {
+                SimpleDateFormat sdf = new SimpleDateFormat("HH:mm", Locale.getDefault());
+                v.setTextViewText(R.id.task_time, sdf.format(new Date(item.dueAt)));
+            }
             v.setViewVisibility(R.id.task_time, android.view.View.VISIBLE);
         } else {
             v.setViewVisibility(R.id.task_time, android.view.View.GONE);
         }
 
-        // 每日徽标与时间的分隔符
+        // 徽标与时间的分隔符
         v.setViewVisibility(R.id.task_routine_separator,
                 (item.isRoutine && hasTime) ? android.view.View.VISIBLE : android.view.View.GONE);
+        v.setViewVisibility(R.id.task_timed_separator,
+                (item.isTimed && hasTime) ? android.view.View.VISIBLE : android.view.View.GONE);
 
         // 地点
         boolean hasLocation = item.location != null && !item.location.isEmpty();
@@ -96,8 +107,8 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
             v.setViewVisibility(R.id.task_location, android.view.View.GONE);
         }
 
-        // 时间/每日 与 地点间的分隔符
-        boolean hasLeft = hasTime || item.isRoutine;
+        // 时间/每日/时限 与 地点间的分隔符
+        boolean hasLeft = hasTime || item.isRoutine || item.isTimed;
         v.setViewVisibility(R.id.task_separator,
                 (hasLeft && hasLocation) ? android.view.View.VISIBLE : android.view.View.GONE);
 
@@ -109,8 +120,6 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         v.setInt(R.id.task_text, "setPaintFlags", Paint.ANTI_ALIAS_FLAG);
 
         // 点击任务行/复选框 → 通过 fillInIntent 携带 todoId，触发模板的标记完成
-        // 注意：checkbox ImageView 必须单独设置 fillInIntent，
-        // 否则点击事件会被 ImageView 消费而不传递到根视图
         Intent fillInIntent = new Intent();
         fillInIntent.putExtra(EXTRA_TODO_ID, item.id);
         v.setOnClickFillInIntent(R.id.widget_task_item_root, fillInIntent);
@@ -142,7 +151,33 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         return true;
     }
 
-    // ---- 数据加载（使用 TodoDbHelper 原生 SQL 查询） ----
+    // ---- 数据加载 ----
+
+    private void loadData() {
+        String currentTab = TodoWidgetProvider.getWidgetTab(context, widgetId);
+        if (TodoWidgetProvider.TAB_TIMED.equals(currentTab)) {
+            loadTimedTodos();
+        } else {
+            loadTodayTodos();
+        }
+    }
+
+    private void loadTimedTodos() {
+        todoItems.clear();
+        List<TodoDbHelper.WidgetTodoItem> dbItems = TodoDbHelper.getInstance(context)
+                .getActiveTimedTodosForWidget(TodoWidgetProvider.completingRows.keySet());
+
+        for (TodoDbHelper.WidgetTodoItem item : dbItems) {
+            TodoItem ti = new TodoItem();
+            ti.id = item.id;
+            ti.text = item.text;
+            ti.dueAt = item.dueAt;
+            ti.location = item.location;
+            ti.isRoutine = false;
+            ti.isTimed = true;
+            todoItems.add(ti);
+        }
+    }
 
     private void loadTodayTodos() {
         todoItems.clear();
@@ -160,6 +195,7 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
             ti.dueAt = item.dueAt;
             ti.location = item.location;
             ti.isRoutine = item.isRoutine;
+            ti.isTimed = false;
             todoItems.add(ti);
         }
     }
@@ -181,5 +217,6 @@ public class TodoWidgetViewsFactory implements RemoteViewsService.RemoteViewsFac
         long dueAt;
         String location;
         boolean isRoutine;
+        boolean isTimed;
     }
 }

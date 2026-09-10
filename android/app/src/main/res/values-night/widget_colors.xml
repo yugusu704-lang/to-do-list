@@ -7,4 +7,9 @@
     <color name="widget_accent">#3B82F6</color>
     <color name="widget_done">#22C55E</color>
     <color name="widget_checkbox_border">#57534E</color>
+    <color name="widget_tab_container_bg">#292524</color>
+    <color name="widget_tab_selected_bg">#44403C</color>
+    <color name="widget_tab_selected_text">#FAFAF9</color>
+    <color name="widget_tab_unselected_text">#A8A29E</color>
+    <color name="widget_timed_badge_text">#FBBF24</color>
 </resources>

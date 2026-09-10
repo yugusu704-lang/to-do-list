@@ -16,6 +16,7 @@ describe('AddTodo', () => {
       dueAt: null,
       location: null,
       isRoutine: false,
+      isTimed: false,
     });
   });
 
@@ -47,6 +48,7 @@ describe('AddTodo', () => {
       dueAt: '2026-07-30T15:00',
       location: null,
       isRoutine: false,
+      isTimed: false,
     });
   });
 
@@ -69,10 +71,11 @@ describe('AddTodo', () => {
       dueAt: null,
       location: '公司会议室',
       isRoutine: false,
+      isTimed: false,
     });
   });
 
-  test('点击每日按钮后提交带 isRoutine: true', () => {
+  test('点击每日按钮后提交带 isRoutine: true 且 isTimed: false', () => {
     const onAdd = vi.fn();
     render(<AddTodo onAdd={onAdd} />);
 
@@ -88,21 +91,49 @@ describe('AddTodo', () => {
       dueAt: null,
       location: null,
       isRoutine: true,
+      isTimed: false,
     });
   });
 
-  test('提交后所有输入框与每日状态重置清空', () => {
+  test('点击时限按钮后提交带 isTimed: true 且与每日互斥', () => {
     const onAdd = vi.fn();
     render(<AddTodo onAdd={onAdd} />);
 
-    const textInput = screen.getByPlaceholderText(/添加新任务/);
     const routineBtn = screen.getByRole('button', { name: /每日/ });
+    const timedBtn = screen.getByRole('button', { name: /阶段时限/ });
 
+    // 先点击每日，再点击时限，验证互斥
     fireEvent.click(routineBtn);
+    expect(routineBtn.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(timedBtn);
+    expect(timedBtn.getAttribute('aria-pressed')).toBe('true');
+    expect(routineBtn.getAttribute('aria-pressed')).toBe('false');
+
+    const textInput = screen.getByPlaceholderText(/添加阶段时限任务/);
+    fireEvent.change(textInput, { target: { value: '完成毕业论文' } });
+    fireEvent.submit(textInput.closest('form'));
+
+    expect(onAdd).toHaveBeenCalledWith({
+      text: '完成毕业论文',
+      dueAt: null,
+      location: null,
+      isRoutine: false,
+      isTimed: true,
+    });
+  });
+
+  test('提交后所有输入框、每日状态与时限状态重置清空', () => {
+    const onAdd = vi.fn();
+    render(<AddTodo onAdd={onAdd} />);
+
+    const timedBtn = screen.getByRole('button', { name: /阶段时限/ });
+    fireEvent.click(timedBtn);
+
+    const textInput = screen.getByPlaceholderText(/添加阶段时限任务/);
     fireEvent.change(textInput, { target: { value: '买牛奶' } });
     fireEvent.submit(textInput.closest('form'));
 
     expect(textInput.value).toBe('');
-    expect(routineBtn.getAttribute('aria-pressed')).toBe('false');
+    expect(timedBtn.getAttribute('aria-pressed')).toBe('false');
   });
 });

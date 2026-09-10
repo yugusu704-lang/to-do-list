@@ -139,4 +139,46 @@ describe('TodoItem', () => {
       isRoutine: true,
     }));
   });
+
+  test('isTimed 为 true 时显示专属“时限”徽标与完整日期+时间', () => {
+    const timedTodo = {
+      ...baseTodo,
+      isTimed: true,
+      dueAt: '2026-09-19T10:30',
+    };
+    render(<TodoItem todo={timedTodo} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('时限')).toBeInTheDocument();
+    // 应该包含 9月19日 和 10:30
+    expect(screen.getByText(/9月19日\s*10:30/)).toBeInTheDocument();
+  });
+
+  test('isTimed 为 true 时渲染智能倒计时标签', () => {
+    // 设置一个明显超期的时间和一个今天的时间
+    const overdueTodo = {
+      ...baseTodo,
+      isTimed: true,
+      dueAt: '2020-01-01T10:00',
+    };
+    render(<TodoItem todo={overdueTodo} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByText('已超期')).toBeInTheDocument();
+  });
+
+  test('编辑模式下可以切换“时限”属性并保存', () => {
+    const onUpdate = vi.fn();
+    render(<TodoItem todo={baseTodo} onToggle={vi.fn()} onDelete={vi.fn()} onUpdate={onUpdate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /编辑任务/ }));
+
+    const timedToggle = screen.getByRole('button', { name: /阶段时限/ });
+    fireEvent.click(timedToggle);
+
+    fireEvent.click(screen.getByRole('button', { name: /保存/ }));
+
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      id: '1',
+      isTimed: true,
+    }));
+  });
 });

@@ -13,12 +13,53 @@ function RepeatIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
-// 从 ISO datetime 字符串提取纯时间 HH:MM
-function formatTime(dueAt) {
-  if (!dueAt) return null;
-  const date = new Date(dueAt);
-  if (isNaN(date.getTime())) return null;
-  return date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+// 时限/倒计时图标 SVG
+function HourglassIcon({ className = 'w-3.5 h-3.5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 22h14" />
+      <path d="M5 2h14" />
+      <path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22" />
+      <path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2" />
+    </svg>
+  );
+}
+
+// 提取并智能格式化时间与倒计时
+function formatDeadlineInfo(dueAt, isTimed) {
+  if (!dueAt) return { displayTime: null, countdownTag: null, isOverdue: false };
+  const due = new Date(dueAt);
+  if (isNaN(due.getTime())) return { displayTime: null, countdownTag: null, isOverdue: false };
+
+  const timeStr = due.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+  if (!isTimed) {
+    return { displayTime: timeStr, countdownTag: null, isOverdue: false };
+  }
+
+  const month = due.getMonth() + 1;
+  const day = due.getDate();
+  const displayTime = `${month}月${day}日 ${timeStr}`;
+
+  const now = new Date();
+  const todayMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dueMidnight = new Date(due.getFullYear(), due.getMonth(), due.getDate()).getTime();
+  const diffDays = Math.ceil((dueMidnight - todayMidnight) / 86400000);
+
+  let countdownTag = null;
+  let isOverdue = false;
+  if (diffDays < 0) {
+    countdownTag = '已超期';
+    isOverdue = true;
+  } else if (diffDays === 0) {
+    countdownTag = '今天截止';
+  } else if (diffDays === 1) {
+    countdownTag = '明天截止';
+  } else {
+    countdownTag = `剩余 ${diffDays} 天`;
+  }
+
+  return { displayTime, countdownTag, isOverdue };
 }
 
 // 创建 ripple 效果
@@ -47,6 +88,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
   const [editDueAt, setEditDueAt] = useState(todo.dueAt || '');
   const [editLocation, setEditLocation] = useState(todo.location || '');
   const [editIsRoutine, setEditIsRoutine] = useState(Boolean(todo.isRoutine));
+  const [editIsTimed, setEditIsTimed] = useState(Boolean(todo.isTimed));
 
   // 当外部 todo 变更时同步本地编辑 state
   useEffect(() => {
@@ -54,9 +96,10 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditDueAt(todo.dueAt || '');
     setEditLocation(todo.location || '');
     setEditIsRoutine(Boolean(todo.isRoutine));
+    setEditIsTimed(Boolean(todo.isTimed));
   }, [todo]);
 
-  const time = formatTime(todo.dueAt);
+  const { displayTime, countdownTag, isOverdue } = formatDeadlineInfo(todo.dueAt, todo.isTimed);
 
   const handleStartEdit = useCallback((e) => {
     e.stopPropagation();
@@ -65,6 +108,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditDueAt(todo.dueAt || '');
     setEditLocation(todo.location || '');
     setEditIsRoutine(Boolean(todo.isRoutine));
+    setEditIsTimed(Boolean(todo.isTimed));
   }, [todo]);
 
   const handleSave = useCallback((e) => {
@@ -78,10 +122,11 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
         dueAt: editDueAt || null,
         location: editLocation.trim() || null,
         isRoutine: editIsRoutine,
+        isTimed: editIsTimed,
       });
     }
     setIsEditing(false);
-  }, [editText, editDueAt, editLocation, editIsRoutine, onUpdate, todo.id]);
+  }, [editText, editDueAt, editLocation, editIsRoutine, editIsTimed, onUpdate, todo.id]);
 
   const handleCancel = useCallback((e) => {
     if (e) e.stopPropagation();
@@ -90,6 +135,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditDueAt(todo.dueAt || '');
     setEditLocation(todo.location || '');
     setEditIsRoutine(Boolean(todo.isRoutine));
+    setEditIsTimed(Boolean(todo.isTimed));
   }, [todo]);
 
   const handleKeyDown = (e) => {
@@ -117,12 +163,36 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
         <div className="flex flex-wrap gap-2">
           <DateButton value={editDueAt} onChange={setEditDueAt} />
 
+          {/* 编辑模式下的时限切换 */}
+          <button
+            type="button"
+            aria-label="阶段时限"
+            aria-pressed={editIsTimed}
+            onClick={() => {
+              const next = !editIsTimed;
+              setEditIsTimed(next);
+              if (next) setEditIsRoutine(false);
+            }}
+            className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+              editIsTimed
+                ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs'
+                : 'border-border bg-card text-text-muted hover:border-text-muted'
+            }`}
+          >
+            <HourglassIcon />
+            <span>时限</span>
+          </button>
+
           {/* 编辑模式下的每日必做切换 */}
           <button
             type="button"
             aria-label="每日必做"
             aria-pressed={editIsRoutine}
-            onClick={() => setEditIsRoutine(!editIsRoutine)}
+            onClick={() => {
+              const next = !editIsRoutine;
+              setEditIsRoutine(next);
+              if (next) setEditIsTimed(false);
+            }}
             className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
               editIsRoutine
                 ? 'border-primary bg-primary/10 text-primary font-medium shadow-xs'
@@ -214,21 +284,39 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
               <span>每日</span>
             </span>
           )}
+          {/* 阶段时限标识胶囊 */}
+          {todo.isTimed && (
+            <span className="inline-flex items-center gap-1 flex-shrink-0 rounded-md bg-amber-100/90 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900 border border-amber-300/70 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30">
+              <HourglassIcon className="w-3 h-3" />
+              <span>时限</span>
+            </span>
+          )}
         </div>
 
-        {/* 次要信息栏（时间与地点） */}
-        {(time || todo.location) && (
+        {/* 次要信息栏（时间、倒计时与地点） */}
+        {(displayTime || todo.location) && (
           <div className="flex flex-wrap items-center gap-2 pt-0.5 text-xs text-text-muted">
-            {time && (
+            {displayTime && (
               <span className="inline-flex items-center gap-1 font-medium text-text-secondary/80">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="opacity-70">
                   <circle cx="12" cy="12" r="10" />
                   <polyline points="12 6 12 12 16 14" />
                 </svg>
-                {time}
+                {displayTime}
               </span>
             )}
-            {time && todo.location && (
+            {countdownTag && (
+              <span
+                className={`inline-flex items-center rounded-md px-1.5 py-0.2 text-[10px] font-semibold ${
+                  isOverdue
+                    ? 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/20'
+                    : 'bg-amber-100 text-amber-900 border border-amber-300/60 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/20'
+                }`}
+              >
+                {countdownTag}
+              </span>
+            )}
+            {(displayTime || countdownTag) && todo.location && (
               <span className="text-[10px] text-[#D6D3D1]">•</span>
             )}
             {todo.location && (

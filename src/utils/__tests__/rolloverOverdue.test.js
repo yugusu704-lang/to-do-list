@@ -222,4 +222,21 @@ describe('rolloverOverdue', () => {
       expect(todos[0].dueAt).toBe('2026-08-04T08:00');
     });
   });
+
+  describe('阶段性时限任务 (isTimed) 豁免规则', () => {
+    test('过期未完成的时限任务不顺延，保留原始截止日期与时间', () => {
+      const timedTodo = makeTodo({
+        id: 'timed1',
+        text: '提交开题报告',
+        isTimed: true,
+        dueAt: '2026-08-01T18:00',
+        completed: false,
+      });
+      const { todos, rolledCount } = rolloverOverdue([timedTodo], NOW);
+      expect(rolledCount).toBe(0);
+      expect(todos[0].dueAt).toBe('2026-08-01T18:00');
+      expect(todos[0]).toBe(timedTodo);
+    });
+  });
 });
+

@@ -58,6 +58,9 @@ export function rolloverOverdue(todos, now = new Date()) {
       return todo;
     }
 
+    // 针对阶段性时限任务 (isTimed)：保持既定绝对死线，不进行每日顺延
+    if (todo.isTimed) return todo;
+
     // 针对普通待办任务
     if (todo.completed || !todo.dueAt) return todo;
     const due = new Date(todo.dueAt);

@@ -493,4 +493,38 @@ describe('useTodos', () => {
     expect(result.current.todos[0].id).toBe('old-routine');
     expect(result.current.todos[0].isRoutine).toBe(true);
   });
+
+  test('添加阶段时限任务并支持更新 isTimed 属性', () => {
+    const { result } = renderHook(() => useTodos());
+
+    act(() => {
+      result.current.addTodo({
+        text: '期末论文大纲',
+        dueAt: '2026-09-20T23:59',
+        isTimed: true,
+      });
+    });
+
+    expect(result.current.todos).toHaveLength(1);
+    const item = result.current.todos[0];
+    expect(item.text).toBe('期末论文大纲');
+    expect(item.isTimed).toBe(true);
+    expect(item.isRoutine).toBe(false);
+    expect(item.dueAt).toBe('2026-09-20T23:59');
+
+    act(() => {
+      result.current.updateTodo({
+        id: item.id,
+        text: '期末论文初稿',
+        dueAt: '2026-09-25T23:59',
+        isTimed: true,
+      });
+    });
+
+    const updated = result.current.todos[0];
+    expect(updated.text).toBe('期末论文初稿');
+    expect(updated.dueAt).toBe('2026-09-25T23:59');
+    expect(updated.isTimed).toBe(true);
+  });
 });
+

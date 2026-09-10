@@ -31,9 +31,14 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class TodoWidgetProvider extends AppWidgetProvider {
 
-    private static final String ACTION_COMPLETE = "com.example.todolist.COMPLETE_TODO";
-    private static final String ACTION_ADD = "com.example.todolist.ADD_TODO";
-    private static final String EXTRA_TODO_ID = "todo_id";
+    public static final String ACTION_COMPLETE = "com.example.todolist.COMPLETE_TODO";
+    public static final String ACTION_ADD = "com.example.todolist.ADD_TODO";
+    public static final String ACTION_SWITCH_TAB = "com.example.todolist.SWITCH_TAB";
+    public static final String EXTRA_TODO_ID = "todo_id";
+    public static final String EXTRA_TAB = "extra_tab";
+    public static final String TAB_TODAY = "today";
+    public static final String TAB_TIMED = "timed";
+    private static final String PREFS_WIDGET = "widget_tab_prefs";
     private static final String TAG = "TodoWidget";
 
     // ---- 完成动效：id -> 当前帧透明度（1.0=不透明），工厂按帧读取 ----
@@ -44,6 +49,17 @@ public class TodoWidgetProvider extends AppWidgetProvider {
     private static final long ANIM_STEP_1_MS = 150L;
     private static final long ANIM_STEP_2_MS = 280L;
     private static final long ANIM_REMOVE_MS = 380L;
+
+    // ---- 状态持久化：记录小部件当前选中的 Tab ----
+    public static String getWidgetTab(Context context, int widgetId) {
+        SharedPreferences sp = context.getSharedPreferences(PREFS_WIDGET, Context.MODE_PRIVATE);
+        return sp.getString("tab_" + widgetId, TAB_TODAY);
+    }
+
+    public static void setWidgetTab(Context context, int widgetId, String tab) {
+        SharedPreferences sp = context.getSharedPreferences(PREFS_WIDGET, Context.MODE_PRIVATE);
+        sp.edit().putString("tab_" + widgetId, tab).apply();
+    }
 
     // ---- 生命周期 ----
 
@@ -66,6 +82,14 @@ public class TodoWidgetProvider extends AppWidgetProvider {
             }
         } else if (ACTION_ADD.equals(action)) {
             openAppToAdd(context);
+        } else if (ACTION_SWITCH_TAB.equals(action)) {
+            int widgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID);
+            String targetTab = intent.getStringExtra(EXTRA_TAB);
+            if (widgetId != AppWidgetManager.INVALID_APPWIDGET_ID && targetTab != null) {
+                setWidgetTab(context, widgetId, targetTab);
+                AppWidgetManager manager = AppWidgetManager.getInstance(context);
+                updateWidget(context, manager, widgetId);
+            }
         }
     }
 
@@ -77,7 +101,10 @@ public class TodoWidgetProvider extends AppWidgetProvider {
     }
 
     private void updateWidget(Context context, AppWidgetManager manager, int widgetId) {
-        List<TodoItem> todayTodos = loadTodayTodos(context);
+        String currentTab = getWidgetTab(context, widgetId);
+        boolean isToday = TAB_TODAY.equals(currentTab);
+
+        List<TodoItem> displayTodos = isToday ? loadTodayTodos(context) : loadTimedTodos(context);
 
         RemoteViews views = new RemoteViews(context.getPackageName(), getLayoutResId());
 
@@ -87,15 +114,37 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         serviceIntent.setData(Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME)));
         views.setRemoteAdapter(R.id.widget_task_container, serviceIntent);
 
+        // 顶部 Tab 栏高亮切换与点击事件绑定
+        views.setInt(R.id.widget_tab_today, "setBackgroundResource",
+                isToday ? R.drawable.widget_tab_selected : android.R.color.transparent);
+        views.setInt(R.id.widget_tab_timed, "setBackgroundResource",
+                isToday ? android.R.color.transparent : R.drawable.widget_tab_selected);
+
+        views.setTextColor(R.id.widget_tab_today,
+                context.getResources().getColor(isToday ? R.color.widget_tab_selected_text : R.color.widget_tab_unselected_text));
+        views.setTextColor(R.id.widget_tab_timed,
+                context.getResources().getColor(isToday ? R.color.widget_tab_unselected_text : R.color.widget_tab_selected_text));
+
+        views.setOnClickPendingIntent(R.id.widget_tab_today,
+                createSwitchTabPendingIntent(context, widgetId, TAB_TODAY, 1));
+        views.setOnClickPendingIntent(R.id.widget_tab_timed,
+                createSwitchTabPendingIntent(context, widgetId, TAB_TIMED, 2));
+
         // 控制空状态和 ListView 的显示
-        if (todayTodos.isEmpty()) {
+        String emptyText = isToday ? "今天没有待办任务" : "暂无进行中的时限任务";
+        views.setTextViewText(R.id.widget_empty, emptyText);
+
+        if (displayTodos.isEmpty()) {
             views.setViewVisibility(R.id.widget_task_container, View.GONE);
             views.setViewVisibility(R.id.widget_empty, View.VISIBLE);
             views.setTextViewText(R.id.widget_footer, "");
         } else {
             views.setViewVisibility(R.id.widget_task_container, View.VISIBLE);
             views.setViewVisibility(R.id.widget_empty, View.GONE);
-            views.setTextViewText(R.id.widget_footer, todayTodos.size() + " 个待办任务");
+            String footerText = isToday
+                    ? displayTodos.size() + " 个今日任务"
+                    : displayTodos.size() + " 个时限任务";
+            views.setTextViewText(R.id.widget_footer, footerText);
         }
 
         // 动态应用深浅色主题（同步 App 内部显示模式）
@@ -108,7 +157,6 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         views.setOnClickPendingIntent(R.id.widget_btn_add, createAddPendingIntent(context));
 
         // 设置 ListView 的点击模板（每个任务行的 PendingIntent 基础）
-        // 必须使用显式 Intent + FLAG_MUTABLE，fillInIntent 才能合并 extras 到模板 Intent
         Intent templateIntent = new Intent(context, TodoWidgetProvider.class);
         templateIntent.setAction(ACTION_COMPLETE);
         templateIntent.setPackage(context.getPackageName());
@@ -122,7 +170,37 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         manager.notifyAppWidgetViewDataChanged(widgetId, R.id.widget_task_container);
     }
 
+    private PendingIntent createSwitchTabPendingIntent(Context context, int widgetId, String tab, int requestCodeOffset) {
+        Intent intent = new Intent(context, TodoWidgetProvider.class);
+        intent.setAction(ACTION_SWITCH_TAB);
+        intent.putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, widgetId);
+        intent.putExtra(EXTRA_TAB, tab);
+        int reqCode = widgetId * 10 + requestCodeOffset;
+        return PendingIntent.getBroadcast(
+                context, reqCode, intent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+    }
+
     // ---- 数据读取 ----
+
+    // 读取阶段时限任务：未完成且按截止时间升序
+    static List<TodoItem> loadTimedTodos(Context context) {
+        List<TodoDbHelper.WidgetTodoItem> dbItems = TodoDbHelper.getInstance(context)
+                .getActiveTimedTodosForWidget(completingRows.keySet());
+
+        List<TodoItem> result = new ArrayList<>(dbItems.size());
+        for (TodoDbHelper.WidgetTodoItem item : dbItems) {
+            TodoItem ti = new TodoItem();
+            ti.id = item.id;
+            ti.text = item.text;
+            ti.dueAt = item.dueAt;
+            ti.location = item.location;
+            ti.isRoutine = false;
+            ti.isTimed = true;
+            result.add(ti);
+        }
+        return result;
+    }
 
     // 读取今日待办：SQLite 直查 dueAt 在今天的未完成任务，按时间升序
     static List<TodoItem> loadTodayTodos(Context context) {
@@ -239,5 +317,6 @@ public class TodoWidgetProvider extends AppWidgetProvider {
         long dueAt;
         String location;
         boolean isRoutine;
+        boolean isTimed;
     }
 }

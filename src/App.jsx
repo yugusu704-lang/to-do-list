@@ -6,6 +6,7 @@ import TodoStorage from './plugins/todoStorage';
 import FilterTabs from './components/FilterTabs';
 import TodoList from './components/TodoList';
 import DailyRoutineSection from './components/DailyRoutineSection';
+import TimedSection from './components/TimedSection';
 import AddTodo from './components/AddTodo';
 import ThemeToggle from './components/ThemeToggle';
 
@@ -65,9 +66,10 @@ export default function App() {
 
   const activeCount = todos.filter((t) => !t.completed).length;
   const completedCount = todos.filter((t) => t.completed).length;
-  // 分离每日必做习惯与普通日程任务
+  // 分离每日必做习惯、阶段时限任务与普通日程任务
   const routines = todos.filter((t) => t.isRoutine);
-  const normalTodos = todos.filter((t) => !t.isRoutine);
+  const timedTodos = todos.filter((t) => t.isTimed);
+  const normalTodos = todos.filter((t) => !t.isRoutine && !t.isTimed);
 
   // 清除已完成 + 显示撤销 toast
   const handleClearCompleted = () => {
@@ -166,11 +168,20 @@ export default function App() {
             onUpdate={updateTodo}
           />
 
+          {/* 独立阶段时限任务专区（默认折叠） */}
+          <TimedSection
+            todos={timedTodos}
+            filter={filter}
+            onToggle={toggleTodo}
+            onDelete={deleteTodo}
+            onUpdate={updateTodo}
+          />
+
           <TodoList
             key={dayKey}
             todos={normalTodos}
             filter={filter}
-            hasOtherContent={routines.length > 0}
+            hasOtherContent={routines.length > 0 || timedTodos.length > 0}
             onToggle={toggleTodo}
             onDelete={deleteTodo}
             onUpdate={updateTodo}

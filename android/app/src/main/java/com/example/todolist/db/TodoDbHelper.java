@@ -23,7 +23,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "TodoDbHelper";
     private static final String DATABASE_NAME = "todos.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     public static final String TABLE_TODOS = "todos";
     public static final String COL_ID = "id";
@@ -40,6 +40,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
     public static final String COL_DELETED_AT = "deleted_at";
     public static final String COL_IS_ROUTINE = "is_routine";
     public static final String COL_LAST_COMPLETED_DATE = "last_completed_date";
+    public static final String COL_IS_TIMED = "is_timed";
 
     private static final String OLD_PREFS_NAME = "todo_prefs";
     private static final String OLD_KEY_TODOS = "todos_json";
@@ -74,7 +75,8 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 + COL_NOTES + " TEXT, "
                 + COL_DELETED_AT + " INTEGER, "
                 + COL_IS_ROUTINE + " INTEGER NOT NULL DEFAULT 0, "
-                + COL_LAST_COMPLETED_DATE + " TEXT"
+                + COL_LAST_COMPLETED_DATE + " TEXT, "
+                + COL_IS_TIMED + " INTEGER NOT NULL DEFAULT 0"
                 + ");";
         db.execSQL(createTableSql);
 
@@ -85,6 +87,8 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 + " (" + COL_CREATED_AT + " DESC);");
         db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_routine ON " + TABLE_TODOS
                 + " (" + COL_IS_ROUTINE + ", " + COL_COMPLETED + ");");
+        db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_timed ON " + TABLE_TODOS
+                + " (" + COL_IS_TIMED + ", " + COL_COMPLETED + ");");
     }
 
     @Override
@@ -97,6 +101,15 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                         + " (" + COL_IS_ROUTINE + ", " + COL_COMPLETED + ");");
             } catch (Exception e) {
                 Log.e(TAG, "Upgrade from v" + oldVersion + " to v" + newVersion + " failed", e);
+            }
+        }
+        if (oldVersion < 3) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_TODOS + " ADD COLUMN " + COL_IS_TIMED + " INTEGER NOT NULL DEFAULT 0;");
+                db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_timed ON " + TABLE_TODOS
+                        + " (" + COL_IS_TIMED + ", " + COL_COMPLETED + ");");
+            } catch (Exception e) {
+                Log.e(TAG, "Upgrade from v" + oldVersion + " to v" + newVersion + " (v3 timed) failed", e);
             }
         }
     }
@@ -182,6 +195,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 obj.put("notes", notes != null && !notes.isEmpty() ? notes : JSONObject.NULL);
 
                 obj.put("isRoutine", cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_ROUTINE)) == 1);
+                obj.put("isTimed", cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_TIMED)) == 1);
 
                 String lastCompletedDate = cursor.getString(cursor.getColumnIndexOrThrow(COL_LAST_COMPLETED_DATE));
                 obj.put("lastCompletedDate", lastCompletedDate != null && !lastCompletedDate.isEmpty() ? lastCompletedDate : JSONObject.NULL);
@@ -265,6 +279,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 }
 
                 cv.put(COL_IS_ROUTINE, obj.optBoolean("isRoutine", false) ? 1 : 0);
+                cv.put(COL_IS_TIMED, obj.optBoolean("isTimed", false) ? 1 : 0);
 
                 if (obj.has("lastCompletedDate") && !obj.isNull("lastCompletedDate")) {
                     cv.put(COL_LAST_COMPLETED_DATE, obj.getString("lastCompletedDate"));
@@ -361,6 +376,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 }
 
                 cv.put(COL_IS_ROUTINE, obj.optBoolean("isRoutine", false) ? 1 : 0);
+                cv.put(COL_IS_TIMED, obj.optBoolean("isTimed", false) ? 1 : 0);
 
                 if (obj.has("lastCompletedDate") && !obj.isNull("lastCompletedDate")) {
                     cv.put(COL_LAST_COMPLETED_DATE, obj.getString("lastCompletedDate"));
@@ -437,6 +453,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
         public long dueAt;
         public String location;
         public boolean isRoutine;
+        public boolean isTimed;
     }
 
     /**
@@ -455,6 +472,13 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 String id = cursor.getString(cursor.getColumnIndexOrThrow(COL_ID));
                 boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(COL_COMPLETED)) == 1;
                 boolean isRoutine = cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_ROUTINE)) == 1;
+                boolean isTimed = cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_TIMED)) == 1;
+
+                // 阶段时限任务专属展示在另一个 Tab，不在“今日待办”中混杂，除非它是今日到期且用户希望看？
+                // 根据决策点：今日待办仅展示日常和今日任务，时限任务在第二个Tab集中展示
+                if (isTimed) {
+                    continue;
+                }
 
                 // 已完成任务仅在动效期间显示
                 if (completed && (completingIds == null || !completingIds.contains(id))) {
@@ -478,6 +502,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 item.dueAt = dueAt;
                 item.location = cursor.getString(cursor.getColumnIndexOrThrow(COL_LOCATION));
                 item.isRoutine = isRoutine;
+                item.isTimed = false;
                 result.add(item);
             }
         } catch (Exception e) {
@@ -492,12 +517,65 @@ public class TodoDbHelper extends SQLiteOpenHelper {
         Collections.sort(result, new Comparator<WidgetTodoItem>() {
             @Override
             public int compare(WidgetTodoItem a, WidgetTodoItem b) {
-                // 如果都有时间，按时间升序
                 if (a.dueAt > 0 && b.dueAt > 0) {
                     return Long.compare(a.dueAt, b.dueAt);
                 }
-                // 无时间的排在有时间的上方，或者下方：按 a.dueAt > 0 排序
                 return Long.compare(a.dueAt, b.dueAt);
+            }
+        });
+
+        return result;
+    }
+
+    /**
+     * 小组件直接查询：未完成的阶段时限任务，严格按截止时间升序排列（近的在最前）
+     */
+    public synchronized List<WidgetTodoItem> getActiveTimedTodosForWidget(java.util.Set<String> completingIds) {
+        List<WidgetTodoItem> result = new ArrayList<>();
+        SQLiteDatabase db = getReadableDatabase();
+        Cursor cursor = null;
+        try {
+            String selection = COL_DELETED_AT + " IS NULL AND " + COL_IS_TIMED + " = 1";
+            cursor = db.query(TABLE_TODOS, null, selection, null, null, null, null);
+
+            while (cursor.moveToNext()) {
+                String id = cursor.getString(cursor.getColumnIndexOrThrow(COL_ID));
+                boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(COL_COMPLETED)) == 1;
+
+                if (completed && (completingIds == null || !completingIds.contains(id))) {
+                    continue;
+                }
+
+                String dueAtStr = cursor.getString(cursor.getColumnIndexOrThrow(COL_DUE_AT));
+                long dueAt = parseDueAtStr(dueAtStr);
+
+                WidgetTodoItem item = new WidgetTodoItem();
+                item.id = id;
+                item.text = cursor.getString(cursor.getColumnIndexOrThrow(COL_TEXT));
+                item.dueAt = dueAt;
+                item.location = cursor.getString(cursor.getColumnIndexOrThrow(COL_LOCATION));
+                item.isRoutine = false;
+                item.isTimed = true;
+                result.add(item);
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "getActiveTimedTodosForWidget failed", e);
+        } finally {
+            if (cursor != null) {
+                cursor.close();
+            }
+        }
+
+        // 排序规则：严格按截止时间 dueAt 升序排列（最紧急的排在最前）
+        Collections.sort(result, new Comparator<WidgetTodoItem>() {
+            @Override
+            public int compare(WidgetTodoItem a, WidgetTodoItem b) {
+                if (a.dueAt > 0 && b.dueAt > 0) {
+                    return Long.compare(a.dueAt, b.dueAt);
+                }
+                if (a.dueAt > 0) return -1;
+                if (b.dueAt > 0) return 1;
+                return 0;
             }
         });
 
