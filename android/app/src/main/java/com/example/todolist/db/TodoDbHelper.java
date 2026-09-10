@@ -23,7 +23,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
 
     private static final String TAG = "TodoDbHelper";
     private static final String DATABASE_NAME = "todos.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     public static final String TABLE_TODOS = "todos";
     public static final String COL_ID = "id";
@@ -41,6 +41,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
     public static final String COL_IS_ROUTINE = "is_routine";
     public static final String COL_LAST_COMPLETED_DATE = "last_completed_date";
     public static final String COL_IS_TIMED = "is_timed";
+    public static final String COL_HAS_REMINDER = "has_reminder";
 
     private static final String OLD_PREFS_NAME = "todo_prefs";
     private static final String OLD_KEY_TODOS = "todos_json";
@@ -76,7 +77,8 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                 + COL_DELETED_AT + " INTEGER, "
                 + COL_IS_ROUTINE + " INTEGER NOT NULL DEFAULT 0, "
                 + COL_LAST_COMPLETED_DATE + " TEXT, "
-                + COL_IS_TIMED + " INTEGER NOT NULL DEFAULT 0"
+                + COL_IS_TIMED + " INTEGER NOT NULL DEFAULT 0, "
+                + COL_HAS_REMINDER + " INTEGER NOT NULL DEFAULT 0"
                 + ");";
         db.execSQL(createTableSql);
 
@@ -110,6 +112,13 @@ public class TodoDbHelper extends SQLiteOpenHelper {
                         + " (" + COL_IS_TIMED + ", " + COL_COMPLETED + ");");
             } catch (Exception e) {
                 Log.e(TAG, "Upgrade from v" + oldVersion + " to v" + newVersion + " (v3 timed) failed", e);
+            }
+        }
+        if (oldVersion < 4) {
+            try {
+                db.execSQL("ALTER TABLE " + TABLE_TODOS + " ADD COLUMN " + COL_HAS_REMINDER + " INTEGER NOT NULL DEFAULT 0;");
+            } catch (Exception e) {
+                Log.e(TAG, "Upgrade from v" + oldVersion + " to v" + newVersion + " (v4 has_reminder) failed", e);
             }
         }
     }
@@ -196,6 +205,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
 
                 obj.put("isRoutine", cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_ROUTINE)) == 1);
                 obj.put("isTimed", cursor.getInt(cursor.getColumnIndexOrThrow(COL_IS_TIMED)) == 1);
+                obj.put("hasReminder", cursor.getInt(cursor.getColumnIndexOrThrow(COL_HAS_REMINDER)) == 1);
 
                 String lastCompletedDate = cursor.getString(cursor.getColumnIndexOrThrow(COL_LAST_COMPLETED_DATE));
                 obj.put("lastCompletedDate", lastCompletedDate != null && !lastCompletedDate.isEmpty() ? lastCompletedDate : JSONObject.NULL);
@@ -280,6 +290,7 @@ public class TodoDbHelper extends SQLiteOpenHelper {
 
                 cv.put(COL_IS_ROUTINE, obj.optBoolean("isRoutine", false) ? 1 : 0);
                 cv.put(COL_IS_TIMED, obj.optBoolean("isTimed", false) ? 1 : 0);
+                cv.put(COL_HAS_REMINDER, obj.optBoolean("hasReminder", false) ? 1 : 0);
 
                 if (obj.has("lastCompletedDate") && !obj.isNull("lastCompletedDate")) {
                     cv.put(COL_LAST_COMPLETED_DATE, obj.getString("lastCompletedDate"));

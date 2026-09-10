@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import TodoItem from './TodoItem';
 
 // 沙漏图标 SVG
@@ -53,8 +53,23 @@ export default function TimedSection({
   onToggle,
   onDelete,
   onUpdate,
+  highlightedTodoId = null,
 }) {
   const [isCollapsed, setIsCollapsed] = useState(true);
+
+  // 当传入高亮任务 ID（如点击通知唤起）时，自动展开专区并定位
+  useEffect(() => {
+    if (highlightedTodoId) {
+      setIsCollapsed(false);
+      const timer = setTimeout(() => {
+        const el = document.getElementById(`todo-item-${highlightedTodoId}`);
+        if (el && typeof el.scrollIntoView === 'function') {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [highlightedTodoId]);
 
   if (!todos || todos.length === 0) {
     return null;
@@ -128,6 +143,7 @@ export default function TimedSection({
                   onToggle={onToggle}
                   onDelete={onDelete}
                   onUpdate={onUpdate}
+                  isHighlighted={highlightedTodoId === todo.id}
                 />
               ))
             )}

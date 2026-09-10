@@ -526,5 +526,51 @@ describe('useTodos', () => {
     expect(updated.dueAt).toBe('2026-09-25T23:59');
     expect(updated.isTimed).toBe(true);
   });
+
+  test('时限任务默认开启 hasReminder 且支持手动关闭及更新', () => {
+    const { result } = renderHook(() => useTodos());
+
+    // 1. 普通任务默认 hasReminder: false
+    act(() => {
+      result.current.addTodo({ text: '普通任务' });
+    });
+    expect(result.current.todos[0].hasReminder).toBe(false);
+
+    // 2. 时限任务带截止日期默认 hasReminder: true
+    act(() => {
+      result.current.addTodo({
+        text: '阶段论文',
+        dueAt: '2026-09-20T12:00',
+        isTimed: true,
+      });
+    });
+    expect(result.current.todos[0].isTimed).toBe(true);
+    expect(result.current.todos[0].hasReminder).toBe(true);
+
+    // 3. 显式指定 hasReminder: false
+    act(() => {
+      result.current.addTodo({
+        text: '无提醒时限任务',
+        dueAt: '2026-09-22T12:00',
+        isTimed: true,
+        hasReminder: false,
+      });
+    });
+    expect(result.current.todos[0].hasReminder).toBe(false);
+
+    // 4. 通过 updateTodo 更新 hasReminder
+    const targetId = result.current.todos[0].id;
+    act(() => {
+      result.current.updateTodo({
+        id: targetId,
+        text: '无提醒时限任务（现已开启）',
+        dueAt: '2026-09-22T12:00',
+        isTimed: true,
+        hasReminder: true,
+      });
+    });
+    expect(result.current.todos[0].hasReminder).toBe(true);
+  });
 });
+
 

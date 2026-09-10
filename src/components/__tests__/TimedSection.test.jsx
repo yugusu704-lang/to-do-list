@@ -103,4 +103,24 @@ describe('TimedSection', () => {
     expect(screen.queryByText('提交开题报告')).not.toBeInTheDocument();
     expect(screen.getByText('完成中期答辩')).toBeInTheDocument();
   });
+
+  test('传入 highlightedTodoId 时自动展开专区并高亮目标任务', () => {
+    render(
+      <TimedSection
+        todos={sampleTimedTodos}
+        onToggle={vi.fn()}
+        onDelete={vi.fn()}
+        onUpdate={vi.fn()}
+        highlightedTodoId="t1"
+      />
+    );
+
+    // 自动展开，任务已挂载并呈现
+    expect(screen.getByText('收起')).toBeInTheDocument();
+    expect(screen.getByText('提交开题报告')).toBeInTheDocument();
+
+    const targetItem = document.getElementById('todo-item-t1');
+    expect(targetItem).toHaveClass('ring-amber-500');
+  });
 });
+

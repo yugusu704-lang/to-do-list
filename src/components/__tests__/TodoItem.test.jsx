@@ -181,4 +181,53 @@ describe('TodoItem', () => {
       isTimed: true,
     }));
   });
+
+  test('isTimed 为 true 且 hasReminder 为 true 时渲染已开启提醒标识', () => {
+    const timedReminderTodo = {
+      ...baseTodo,
+      isTimed: true,
+      hasReminder: true,
+      dueAt: '2026-09-20T10:00',
+    };
+    render(<TodoItem todo={timedReminderTodo} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    expect(screen.getByLabelText('已开启提醒')).toBeInTheDocument();
+  });
+
+  test('编辑模式下可以切换“3天前提醒”并保存', () => {
+    const onUpdate = vi.fn();
+    const timedTodo = {
+      ...baseTodo,
+      isTimed: true,
+      hasReminder: true,
+      dueAt: '2026-09-20T10:00',
+    };
+    render(<TodoItem todo={timedTodo} onToggle={vi.fn()} onDelete={vi.fn()} onUpdate={onUpdate} />);
+
+    fireEvent.click(screen.getByRole('button', { name: /编辑任务/ }));
+
+    const reminderBtn = screen.getByRole('button', { name: /提前3天提醒/ });
+    expect(reminderBtn.getAttribute('aria-pressed')).toBe('true');
+
+    // 切换关闭提醒
+    fireEvent.click(reminderBtn);
+    expect(reminderBtn.getAttribute('aria-pressed')).toBe('false');
+
+    fireEvent.click(screen.getByRole('button', { name: /保存/ }));
+
+    expect(onUpdate).toHaveBeenCalledWith(expect.objectContaining({
+      id: '1',
+      isTimed: true,
+      hasReminder: false,
+    }));
+  });
+
+  test('isHighlighted 为 true 时渲染聚焦高亮样式', () => {
+    const { container } = render(
+      <TodoItem todo={baseTodo} onToggle={vi.fn()} onDelete={vi.fn()} isHighlighted={true} />
+    );
+
+    expect(container.firstChild).toHaveClass('ring-amber-500');
+  });
 });
+

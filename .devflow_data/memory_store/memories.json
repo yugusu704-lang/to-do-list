@@ -70,5 +70,17 @@
     "version": 1,
     "superseded_by": null,
     "is_archived": false
+  },
+  {
+    "id": "mem_1789039463533",
+    "title": "验证时限任务截止前3天通知提醒功能代码与架构",
+    "content": "ADR: 验证时限任务截止前3天通知提醒功能代码与架构. Approved and completed with 3-room consensus and Bee quorum.",
+    "category": "adr",
+    "created_at": 1789039463.533319,
+    "updated_at": 1789039463.533319,
+    "access_count": 0,
+    "version": 1,
+    "superseded_by": null,
+    "is_archived": false
   }
 ]

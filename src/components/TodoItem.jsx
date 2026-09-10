@@ -25,6 +25,16 @@ function HourglassIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
+// 提醒铃铛图标 SVG
+function BellIcon({ className = 'w-3.5 h-3.5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </svg>
+  );
+}
+
 // 提取并智能格式化时间与倒计时
 function formatDeadlineInfo(dueAt, isTimed) {
   if (!dueAt) return { displayTime: null, countdownTag: null, isOverdue: false };
@@ -82,13 +92,14 @@ function createRipple(e, container) {
 }
 
 // 单个任务项组件
-export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
+export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlighted = false }) {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(todo.text);
   const [editDueAt, setEditDueAt] = useState(todo.dueAt || '');
   const [editLocation, setEditLocation] = useState(todo.location || '');
   const [editIsRoutine, setEditIsRoutine] = useState(Boolean(todo.isRoutine));
   const [editIsTimed, setEditIsTimed] = useState(Boolean(todo.isTimed));
+  const [editHasReminder, setEditHasReminder] = useState(Boolean(todo.hasReminder));
 
   // 当外部 todo 变更时同步本地编辑 state
   useEffect(() => {
@@ -97,6 +108,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditLocation(todo.location || '');
     setEditIsRoutine(Boolean(todo.isRoutine));
     setEditIsTimed(Boolean(todo.isTimed));
+    setEditHasReminder(Boolean(todo.hasReminder));
   }, [todo]);
 
   const { displayTime, countdownTag, isOverdue } = formatDeadlineInfo(todo.dueAt, todo.isTimed);
@@ -109,6 +121,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditLocation(todo.location || '');
     setEditIsRoutine(Boolean(todo.isRoutine));
     setEditIsTimed(Boolean(todo.isTimed));
+    setEditHasReminder(Boolean(todo.hasReminder));
   }, [todo]);
 
   const handleSave = useCallback((e) => {
@@ -123,10 +136,11 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
         location: editLocation.trim() || null,
         isRoutine: editIsRoutine,
         isTimed: editIsTimed,
+        hasReminder: editIsTimed ? editHasReminder : false,
       });
     }
     setIsEditing(false);
-  }, [editText, editDueAt, editLocation, editIsRoutine, editIsTimed, onUpdate, todo.id]);
+  }, [editText, editDueAt, editLocation, editIsRoutine, editIsTimed, editHasReminder, onUpdate, todo.id]);
 
   const handleCancel = useCallback((e) => {
     if (e) e.stopPropagation();
@@ -136,6 +150,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
     setEditLocation(todo.location || '');
     setEditIsRoutine(Boolean(todo.isRoutine));
     setEditIsTimed(Boolean(todo.isTimed));
+    setEditHasReminder(Boolean(todo.hasReminder));
   }, [todo]);
 
   const handleKeyDown = (e) => {
@@ -163,7 +178,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
         <div className="flex flex-wrap gap-2">
           <DateButton value={editDueAt} onChange={setEditDueAt} />
 
-          {/* 编辑模式下的时限切换 */}
+          {/* 阶段时限开关胶囊 */}
           <button
             type="button"
             aria-label="阶段时限"
@@ -171,7 +186,10 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
             onClick={() => {
               const next = !editIsTimed;
               setEditIsTimed(next);
-              if (next) setEditIsRoutine(false);
+              if (next) {
+                setEditIsRoutine(false);
+                setEditHasReminder(true);
+              }
             }}
             className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
               editIsTimed
@@ -182,6 +200,24 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
             <HourglassIcon />
             <span>时限</span>
           </button>
+
+          {/* 编辑模式下的提前3天提醒切换 */}
+          {editIsTimed && (
+            <button
+              type="button"
+              aria-label="提前3天提醒"
+              aria-pressed={editHasReminder}
+              onClick={() => setEditHasReminder(!editHasReminder)}
+              className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
+                editHasReminder
+                  ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs'
+                  : 'border-border bg-card text-text-muted line-through opacity-70 hover:border-text-muted'
+              }`}
+            >
+              <BellIcon />
+              <span>3天前提醒</span>
+            </button>
+          )}
 
           {/* 编辑模式下的每日必做切换 */}
           <button
@@ -236,8 +272,11 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
   // 常规浏览视图（垂直居中对齐、左右均衡舒展）
   return (
     <div
-      className={`group relative flex items-center gap-3 sm:gap-4 overflow-hidden rounded-xl bg-card px-4 sm:px-5 py-3.5 shadow-[var(--shadow-card)] transition-all duration-200 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.99] ${
+      id={`todo-item-${todo.id}`}
+      className={`group relative flex items-center gap-3 sm:gap-4 overflow-hidden rounded-xl bg-card px-4 sm:px-5 py-3.5 shadow-[var(--shadow-card)] transition-all duration-300 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.99] ${
         todo.completed ? 'opacity-60' : ''
+      } ${
+        isHighlighted ? 'ring-2 ring-amber-500 ring-offset-2 dark:ring-offset-background bg-amber-500/10' : ''
       }`}
     >
       {/* 圆圈复选框（上下居中） */}
@@ -289,6 +328,11 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate }) {
             <span className="inline-flex items-center gap-1 flex-shrink-0 rounded-md bg-amber-100/90 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900 border border-amber-300/70 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30">
               <HourglassIcon className="w-3 h-3" />
               <span>时限</span>
+              {todo.hasReminder && (
+                <span aria-label="已开启提醒" title="提前3天提醒已开启" className="ml-0.5 inline-flex items-center text-amber-800 dark:text-amber-300">
+                  <BellIcon className="w-2.5 h-2.5" />
+                </span>
+              )}
             </span>
           )}
         </div>

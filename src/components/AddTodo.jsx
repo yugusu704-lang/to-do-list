@@ -25,6 +25,16 @@ function HourglassIcon({ className = 'w-3.5 h-3.5' }) {
   );
 }
 
+// 提醒铃铛图标 SVG
+function BellIcon({ className = 'w-3.5 h-3.5' }) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+      <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+    </svg>
+  );
+}
+
 // 添加任务表单组件（支持 ref 转发，供 widget 深度链接聚焦输入框）
 const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
   const [text, setText] = useState('');
@@ -32,6 +42,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
   const [location, setLocation] = useState('');
   const [isRoutine, setIsRoutine] = useState(false);
   const [isTimed, setIsTimed] = useState(false);
+  const [hasReminder, setHasReminder] = useState(true);
   const [showLocation, setShowLocation] = useState(false);
 
   const handleSubmit = (e) => {
@@ -44,12 +55,14 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
       location: location.trim() || null,
       isRoutine,
       isTimed,
+      hasReminder: isTimed ? hasReminder : false,
     });
     setText('');
     setDueAt('');
     setLocation('');
     setIsRoutine(false);
     setIsTimed(false);
+    setHasReminder(true);
     setShowLocation(false);
   };
 
@@ -62,7 +75,10 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
   const toggleTimed = () => {
     const next = !isTimed;
     setIsTimed(next);
-    if (next) setIsRoutine(false);
+    if (next) {
+      setIsRoutine(false);
+      setHasReminder(true);
+    }
   };
 
   const placeholderText = isRoutine
@@ -104,6 +120,24 @@ const AddTodo = forwardRef(function AddTodo({ onAdd }, ref) {
             <HourglassIcon />
             <span>时限</span>
           </button>
+
+          {/* 提前3天提醒开关胶囊（仅在激活时限时呈现） */}
+          {isTimed && (
+            <button
+              type="button"
+              aria-label="提前3天提醒"
+              aria-pressed={hasReminder}
+              onClick={() => setHasReminder(!hasReminder)}
+              className={`flex h-10 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl border text-[12px] sm:text-[13px] transition-all duration-200 active:scale-[0.97] ${
+                hasReminder
+                  ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs'
+                  : 'border-border bg-card text-text-muted line-through opacity-70 hover:border-text-muted'
+              }`}
+            >
+              <BellIcon />
+              <span>3天前提醒</span>
+            </button>
+          )}
 
           {/* 每日必做开关胶囊 */}
           <button

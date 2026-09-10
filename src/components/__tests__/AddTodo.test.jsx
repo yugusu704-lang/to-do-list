@@ -17,6 +17,7 @@ describe('AddTodo', () => {
       location: null,
       isRoutine: false,
       isTimed: false,
+      hasReminder: false,
     });
   });
 
@@ -49,6 +50,7 @@ describe('AddTodo', () => {
       location: null,
       isRoutine: false,
       isTimed: false,
+      hasReminder: false,
     });
   });
 
@@ -72,6 +74,7 @@ describe('AddTodo', () => {
       location: '公司会议室',
       isRoutine: false,
       isTimed: false,
+      hasReminder: false,
     });
   });
 
@@ -92,10 +95,11 @@ describe('AddTodo', () => {
       location: null,
       isRoutine: true,
       isTimed: false,
+      hasReminder: false,
     });
   });
 
-  test('点击时限按钮后提交带 isTimed: true 且与每日互斥', () => {
+  test('点击时限按钮后提交带 isTimed: true, hasReminder: true 且与每日互斥', () => {
     const onAdd = vi.fn();
     render(<AddTodo onAdd={onAdd} />);
 
@@ -119,6 +123,35 @@ describe('AddTodo', () => {
       location: null,
       isRoutine: false,
       isTimed: true,
+      hasReminder: true,
+    });
+  });
+
+  test('激活时限时可点击切换关闭提醒', () => {
+    const onAdd = vi.fn();
+    render(<AddTodo onAdd={onAdd} />);
+
+    const timedBtn = screen.getByRole('button', { name: /阶段时限/ });
+    fireEvent.click(timedBtn);
+
+    const reminderBtn = screen.getByRole('button', { name: /提前3天提醒/ });
+    expect(reminderBtn.getAttribute('aria-pressed')).toBe('true');
+
+    // 点击关闭提醒
+    fireEvent.click(reminderBtn);
+    expect(reminderBtn.getAttribute('aria-pressed')).toBe('false');
+
+    const textInput = screen.getByPlaceholderText(/添加阶段时限任务/);
+    fireEvent.change(textInput, { target: { value: '完成大作业' } });
+    fireEvent.submit(textInput.closest('form'));
+
+    expect(onAdd).toHaveBeenCalledWith({
+      text: '完成大作业',
+      dueAt: null,
+      location: null,
+      isRoutine: false,
+      isTimed: true,
+      hasReminder: false,
     });
   });
 

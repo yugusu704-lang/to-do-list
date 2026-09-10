@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import TodoStorage from '../plugins/todoStorage';
 import { rolloverOverdue, getLocalDateKey } from '../utils/rolloverOverdue';
+import { scheduleTodoReminder, cancelTodoReminder } from '../plugins/notificationService';
 
 const STORAGE_KEY = 'todos';
 const AUTO_CLEAN_DAYS = 30;
@@ -107,10 +108,15 @@ export default function useTodos() {
   }, [todos]);
 
   // 添加任务
-  const addTodo = useCallback(({ text, dueAt = null, location = null, isRoutine = false, isTimed = false }) => {
+  const addTodo = useCallback(({ text, dueAt = null, location = null, isRoutine = false, isTimed = false, hasReminder }) => {
     const trimmed = text.trim();
     if (!trimmed) return;
     const now = Date.now();
+    const resolvedIsTimed = Boolean(isTimed);
+    const resolvedHasReminder = typeof hasReminder === 'boolean'
+      ? hasReminder
+      : (resolvedIsTimed && Boolean(dueAt));
+
     const newTodo = {
       id: generateId(),
       text: trimmed,
@@ -125,10 +131,15 @@ export default function useTodos() {
       notes: null,
       deletedAt: null,
       isRoutine: Boolean(isRoutine),
-      isTimed: Boolean(isTimed),
+      isTimed: resolvedIsTimed,
+      hasReminder: resolvedHasReminder,
       lastCompletedDate: null,
     };
     setTodos((prev) => [newTodo, ...prev]);
+
+    if (newTodo.isTimed && newTodo.hasReminder && newTodo.dueAt) {
+      scheduleTodoReminder(newTodo);
+    }
   }, []);
 
   // 切换完成状态（记录完成时间与打卡日期）
@@ -139,7 +150,7 @@ export default function useTodos() {
       prev.map((todo) => {
         if (todo.id !== id) return todo;
         const nextCompleted = !todo.completed;
-        return {
+        const updated = {
           ...todo,
           completed: nextCompleted,
           completedAt: nextCompleted ? now : null,
@@ -148,36 +159,56 @@ export default function useTodos() {
             : (todo.lastCompletedDate || null),
           updatedAt: now,
         };
+        if (nextCompleted) {
+          cancelTodoReminder(todo.id);
+        } else if (updated.isTimed && updated.hasReminder && updated.dueAt) {
+          scheduleTodoReminder(updated);
+        }
+        return updated;
       })
     );
   }, []);
 
   // 修改任务内容、时间、地点、备注、习惯与时限属性等
-  const updateTodo = useCallback(({ id, text, dueAt = null, location = null, notes = null, priority = 0, isRoutine, isTimed }) => {
+  const updateTodo = useCallback(({ id, text, dueAt = null, location = null, notes = null, priority = 0, isRoutine, isTimed, hasReminder }) => {
     const trimmed = typeof text === 'string' ? text.trim() : '';
     if (!trimmed) return;
     const now = Date.now();
     setTodos((prev) =>
-      prev.map((todo) =>
-        todo.id === id
-          ? {
-              ...todo,
-              text: trimmed,
-              dueAt: dueAt || null,
-              location: location?.trim() || null,
-              notes: notes?.trim() || null,
-              priority: typeof priority === 'number' ? priority : todo.priority,
-              isRoutine: typeof isRoutine === 'boolean' ? isRoutine : Boolean(todo.isRoutine),
-              isTimed: typeof isTimed === 'boolean' ? isTimed : Boolean(todo.isTimed),
-              updatedAt: now,
-            }
-          : todo
-      )
+      prev.map((todo) => {
+        if (todo.id !== id) return todo;
+        const nextIsTimed = typeof isTimed === 'boolean' ? isTimed : Boolean(todo.isTimed);
+        const nextHasReminder = typeof hasReminder === 'boolean'
+          ? hasReminder
+          : (typeof isTimed === 'boolean' && isTimed && !todo.isTimed ? true : Boolean(todo.hasReminder));
+
+        const updated = {
+          ...todo,
+          text: trimmed,
+          dueAt: dueAt || null,
+          location: location?.trim() || null,
+          notes: notes?.trim() || null,
+          priority: typeof priority === 'number' ? priority : todo.priority,
+          isRoutine: typeof isRoutine === 'boolean' ? isRoutine : Boolean(todo.isRoutine),
+          isTimed: nextIsTimed,
+          hasReminder: nextHasReminder,
+          updatedAt: now,
+        };
+
+        if (updated.isTimed && updated.hasReminder && updated.dueAt && !updated.completed) {
+          scheduleTodoReminder(updated);
+        } else {
+          cancelTodoReminder(id);
+        }
+
+        return updated;
+      })
     );
   }, []);
 
   // 删除任务
   const deleteTodo = useCallback((id) => {
+    cancelTodoReminder(id);
     setTodos((prev) => prev.filter((todo) => todo.id !== id));
   }, []);
 
@@ -185,6 +216,7 @@ export default function useTodos() {
   const clearCompleted = useCallback(() => {
     const removed = todos.filter((t) => t.completed && !t.isRoutine);
     if (removed.length > 0) {
+      removed.forEach((t) => cancelTodoReminder(t.id));
       setTodos((prev) => prev.filter((t) => !t.completed || t.isRoutine));
     }
     return removed;
@@ -192,6 +224,11 @@ export default function useTodos() {
 
   // 撤销清除
   const restoreTodos = useCallback((restored) => {
+    restored.forEach((t) => {
+      if (t.isTimed && t.hasReminder && t.dueAt && !t.completed) {
+        scheduleTodoReminder(t);
+      }
+    });
     setTodos((prev) => [...restored, ...prev]);
   }, []);
 

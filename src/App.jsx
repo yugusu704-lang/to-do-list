@@ -9,6 +9,7 @@ import DailyRoutineSection from './components/DailyRoutineSection';
 import TimedSection from './components/TimedSection';
 import AddTodo from './components/AddTodo';
 import ThemeToggle from './components/ThemeToggle';
+import { initNotificationListeners } from './plugins/notificationService';
 
 // 计算距离下一个 0 点的毫秒数
 function msUntilMidnight() {
@@ -24,6 +25,7 @@ export default function App() {
   const [filter, setFilter] = useState('all');
   const [dayKey, setDayKey] = useState(() => new Date().toDateString());
   const [toast, setToast] = useState(null);
+  const [highlightedTodoId, setHighlightedTodoId] = useState(null);
   const toastTimerRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -63,6 +65,26 @@ export default function App() {
   useEffect(() => {
     checkAndFocusInput();
   }, [checkAndFocusInput]);
+
+  // 监听点击系统通知唤起 App：提取 todoId 并高亮展开目标时限任务
+  useEffect(() => {
+    let clearTimer;
+    const unsubPromise = initNotificationListeners((todoId) => {
+      if (todoId) {
+        setHighlightedTodoId(todoId);
+        if (clearTimer) clearTimeout(clearTimer);
+        clearTimer = setTimeout(() => {
+          setHighlightedTodoId(null);
+        }, 3500);
+      }
+    });
+    return () => {
+      if (clearTimer) clearTimeout(clearTimer);
+      unsubPromise.then((unsub) => {
+        if (typeof unsub === 'function') unsub();
+      });
+    };
+  }, []);
 
   const activeCount = todos.filter((t) => !t.completed).length;
   const completedCount = todos.filter((t) => t.completed).length;
@@ -175,6 +197,7 @@ export default function App() {
             onToggle={toggleTodo}
             onDelete={deleteTodo}
             onUpdate={updateTodo}
+            highlightedTodoId={highlightedTodoId}
           />
 
           <TodoList
