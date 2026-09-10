@@ -58,18 +58,21 @@ function formatDeadlineInfo(dueAt, isTimed) {
 
   let countdownTag = null;
   let isOverdue = false;
+  let isUrgent = false;
   if (diffDays < 0) {
     countdownTag = '已超期';
     isOverdue = true;
   } else if (diffDays === 0) {
     countdownTag = '今天截止';
+    isUrgent = true;
   } else if (diffDays === 1) {
     countdownTag = '明天截止';
+    isUrgent = true;
   } else {
     countdownTag = `剩余 ${diffDays} 天`;
   }
 
-  return { displayTime, countdownTag, isOverdue };
+  return { displayTime, countdownTag, isOverdue, isUrgent };
 }
 
 // 创建 ripple 效果
@@ -111,7 +114,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
     setEditHasReminder(Boolean(todo.hasReminder));
   }, [todo]);
 
-  const { displayTime, countdownTag, isOverdue } = formatDeadlineInfo(todo.dueAt, todo.isTimed);
+  const { displayTime, countdownTag, isOverdue, isUrgent } = formatDeadlineInfo(todo.dueAt, todo.isTimed);
 
   const handleStartEdit = useCallback((e) => {
     e.stopPropagation();
@@ -193,7 +196,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
             }}
             className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
               editIsTimed
-                ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs'
+                ? 'border-orange-600 bg-orange-100 text-orange-950 dark:border-orange-500/80 dark:bg-orange-500/20 dark:text-orange-300 font-semibold shadow-xs'
                 : 'border-border bg-card text-text-muted hover:border-text-muted'
             }`}
           >
@@ -210,7 +213,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
               onClick={() => setEditHasReminder(!editHasReminder)}
               className={`flex h-10 items-center justify-center gap-1.5 px-3 rounded-xl border text-[13px] transition-all duration-200 active:scale-[0.97] ${
                 editHasReminder
-                  ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs'
+                  ? 'border-orange-600 bg-orange-100 text-orange-950 dark:border-orange-500/80 dark:bg-orange-500/20 dark:text-orange-300 font-semibold shadow-xs'
                   : 'border-border bg-card text-text-muted line-through opacity-70 hover:border-text-muted'
               }`}
             >
@@ -276,7 +279,7 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
       className={`group relative flex items-center gap-3 sm:gap-4 overflow-hidden rounded-xl bg-card px-4 sm:px-5 py-3.5 shadow-[var(--shadow-card)] transition-all duration-300 hover:shadow-[var(--shadow-card-hover)] active:scale-[0.99] ${
         todo.completed ? 'opacity-60' : ''
       } ${
-        isHighlighted ? 'ring-2 ring-amber-500 ring-offset-2 dark:ring-offset-background bg-amber-500/10' : ''
+        isHighlighted ? 'ring-2 ring-orange-500 ring-offset-2 dark:ring-offset-background bg-orange-500/10' : ''
       }`}
     >
       {/* 圆圈复选框（上下居中） */}
@@ -325,11 +328,11 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
           )}
           {/* 阶段时限标识胶囊 */}
           {todo.isTimed && (
-            <span className="inline-flex items-center gap-1 flex-shrink-0 rounded-md bg-amber-100/90 px-1.5 py-0.5 text-[11px] font-semibold text-amber-900 border border-amber-300/70 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30">
-              <HourglassIcon className="w-3 h-3" />
+            <span className="inline-flex items-center gap-1 flex-shrink-0 rounded-md bg-orange-50 px-1.5 py-0.5 text-[11px] font-semibold text-orange-950 border border-orange-200 dark:bg-orange-500/20 dark:text-orange-300 dark:border-orange-500/40">
+              <HourglassIcon className="w-3 h-3 text-orange-600 dark:text-orange-400" />
               <span>时限</span>
               {todo.hasReminder && (
-                <span aria-label="已开启提醒" title="提前3天提醒已开启" className="ml-0.5 inline-flex items-center text-amber-800 dark:text-amber-300">
+                <span aria-label="已开启提醒" title="提前3天提醒已开启" className="ml-0.5 inline-flex items-center text-orange-700 dark:text-orange-300">
                   <BellIcon className="w-2.5 h-2.5" />
                 </span>
               )}
@@ -351,10 +354,12 @@ export default function TodoItem({ todo, onToggle, onDelete, onUpdate, isHighlig
             )}
             {countdownTag && (
               <span
-                className={`inline-flex items-center rounded-md px-1.5 py-0.2 text-[10px] font-semibold ${
+                className={`inline-flex items-center rounded-md px-2 py-0.5 text-[10px] ${
                   isOverdue
-                    ? 'bg-red-100 text-red-700 border border-red-200 dark:bg-red-500/15 dark:text-red-400 dark:border-red-500/20'
-                    : 'bg-amber-100 text-amber-900 border border-amber-300/60 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/20'
+                    ? 'bg-red-50 text-red-700 font-bold border border-red-200 dark:bg-red-500/20 dark:text-red-300 dark:border-red-500/30'
+                    : isUrgent
+                      ? 'bg-orange-500 text-white font-bold shadow-xs'
+                      : 'bg-orange-50 text-orange-950 font-semibold border border-orange-200 dark:bg-orange-500/15 dark:text-orange-300 dark:border-orange-500/30'
                 }`}
               >
                 {countdownTag}

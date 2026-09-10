@@ -106,7 +106,10 @@ export default function TimedSection({
 
   return (
     <section aria-label="阶段时限任务专区" className="mb-4">
-      <div className="rounded-2xl border border-amber-700/20 dark:border-amber-500/20 bg-amber-500/[0.03] p-3.5 sm:p-4 shadow-xs backdrop-blur-xs transition-all duration-200">
+      <div className="relative overflow-hidden rounded-2xl border border-orange-500/25 dark:border-orange-500/35 bg-card p-3.5 sm:p-4 pl-4.5 sm:pl-5 shadow-xs backdrop-blur-xs transition-all duration-200">
+        {/* 左侧 3.5px 珊瑚暖橙色微强调条 */}
+        <div className="absolute left-0 top-0 bottom-0 w-1 bg-orange-500 rounded-r-full" />
+
         {/* 专区顶栏：可点击触发展开/折叠 */}
         <button
           type="button"
@@ -115,17 +118,17 @@ export default function TimedSection({
           className="flex w-full items-center justify-between gap-2 text-left"
         >
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-900 dark:bg-amber-500/15 dark:text-amber-400">
+            <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-orange-100 text-orange-950 dark:bg-orange-500/20 dark:text-orange-300">
               <HourglassIcon className="w-3.5 h-3.5" />
             </div>
             <h2 className="text-[15px] font-semibold tracking-tight text-text">
               时限任务
             </h2>
-            <span className="inline-flex items-center rounded-full bg-amber-100 border border-amber-300/60 px-2 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-500/10 dark:text-amber-300 dark:border-transparent">
+            <span className="inline-flex items-center rounded-full bg-orange-50 border border-orange-200 px-2 py-0.5 text-xs font-semibold text-orange-950 dark:bg-orange-500/15 dark:text-orange-200 dark:border-orange-500/30">
               {activeCount > 0 ? `${activeCount} 项进行中` : '全部已完成'}
             </span>
             {nearestDueText && activeCount > 0 && (
-              <span className="hidden sm:inline-flex text-xs font-medium text-amber-900/80 dark:text-amber-300/80">
+              <span className="hidden sm:inline-flex text-xs font-semibold text-orange-800 dark:text-orange-300">
                 · {nearestDueText}
               </span>
             )}
@@ -139,17 +142,17 @@ export default function TimedSection({
 
         {/* 展开后的时限任务列表 */}
         {!isCollapsed && (
-          <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-amber-700/15 dark:border-amber-500/15">
+          <div className="flex flex-col gap-2 pt-3 mt-3 border-t border-orange-500/15 dark:border-orange-500/20">
             {/* 桌面悬浮横幅设置指引条 */}
-            <div className="flex items-center justify-between gap-2 rounded-xl bg-amber-500/10 dark:bg-amber-500/15 px-3 py-1.5 text-xs text-amber-900/90 dark:text-amber-200 border border-amber-600/20 dark:border-amber-500/20 shadow-xs">
-              <span className="flex items-center gap-1.5 truncate">
+            <div className="flex items-center justify-between gap-2 rounded-xl bg-orange-500/10 dark:bg-orange-500/15 px-3 py-1.5 text-xs text-orange-950 dark:text-orange-200 border border-orange-500/20 dark:border-orange-500/30 shadow-xs">
+              <span className="flex items-center gap-1.5 truncate font-medium">
                 <span className="shrink-0">🔔</span>
                 <span className="truncate">桌面横幅弹窗需开启系统「悬浮通知」</span>
               </span>
               <button
                 type="button"
                 onClick={handleOpenNotificationSettings}
-                className="shrink-0 font-semibold text-amber-800 dark:text-amber-300 hover:underline active:opacity-75"
+                className="shrink-0 font-semibold text-orange-700 dark:text-orange-300 hover:underline active:opacity-75"
               >
                 权限设置 &gt;
               </button>

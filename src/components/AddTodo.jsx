@@ -136,7 +136,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
         ? 'border-2 border-[#2A2C2E] bg-[#F2B84B] text-[#2A2C2E] font-bold shadow-[2px_2px_0px_#2A2C2E] rounded-xl'
         : 'border-2 border-[#2A2C2E] bg-card text-text shadow-[1px_1px_0px_#2A2C2E] rounded-xl'
       : isTimed
-        ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/10 dark:text-amber-400 font-medium shadow-xs rounded-xl'
+        ? 'border-orange-600 bg-orange-100 text-orange-950 dark:border-orange-500/80 dark:bg-orange-500/20 dark:text-orange-300 font-semibold shadow-xs rounded-xl'
         : 'border-border bg-card text-text-muted hover:border-text-muted rounded-xl';
 
   const reminderBtnClasses = isTomoe
@@ -148,7 +148,7 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
         ? 'border-2 border-[#2A2C2E] bg-[#E26D5C] text-white font-bold shadow-[2px_2px_0px_#2A2C2E] rounded-xl'
         : 'border-2 border-[#2A2C2E] bg-card text-text-muted line-through opacity-70 shadow-[1px_1px_0px_#2A2C2E] rounded-xl'
       : hasReminder
-        ? 'border-amber-700/80 bg-amber-100 text-amber-900 dark:border-amber-500/80 dark:bg-amber-500/15 dark:text-amber-300 font-medium shadow-xs rounded-xl'
+        ? 'border-orange-600 bg-orange-100 text-orange-950 dark:border-orange-500/80 dark:bg-orange-500/20 dark:text-orange-300 font-semibold shadow-xs rounded-xl'
         : 'border-border bg-card text-text-muted line-through opacity-70 hover:border-text-muted rounded-xl';
 
   const routineBtnClasses = isTomoe
@@ -259,12 +259,12 @@ const AddTodo = forwardRef(function AddTodo({ onAdd, themeMode }, ref) {
 
         {/* 时限任务提醒小贴士 */}
         {isTimed && hasReminder && (
-          <div className="flex items-center justify-between px-1 text-[11px] text-amber-900/80 dark:text-amber-300/80">
+          <div className="flex items-center justify-between px-1 text-[11px] text-orange-950/80 dark:text-orange-300/80">
             <span>⏰ 截止前3天早晨 09:00 将发送桌面横幅提醒</span>
             <button
               type="button"
               onClick={handleOpenNotificationSettings}
-              className="font-medium text-amber-700 dark:text-amber-400 hover:underline"
+              className="font-semibold text-orange-700 dark:text-orange-400 hover:underline"
             >
               悬浮权限设置 &gt;
             </button>

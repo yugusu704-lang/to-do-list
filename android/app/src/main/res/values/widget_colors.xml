@@ -11,5 +11,5 @@
     <color name="widget_tab_selected_bg">#FFFFFF</color>
     <color name="widget_tab_selected_text">#1C1917</color>
     <color name="widget_tab_unselected_text">#78716C</color>
-    <color name="widget_timed_badge_text">#D97706</color>
+    <color name="widget_timed_badge_text">#EA580C</color>
 </resources>

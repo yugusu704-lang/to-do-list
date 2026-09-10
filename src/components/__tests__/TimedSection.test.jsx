@@ -120,7 +120,7 @@ describe('TimedSection', () => {
     expect(screen.getByText('提交开题报告')).toBeInTheDocument();
 
     const targetItem = document.getElementById('todo-item-t1');
-    expect(targetItem).toHaveClass('ring-amber-500');
+    expect(targetItem).toHaveClass('ring-orange-500');
   });
 
   test('展开后显示桌面横幅通知指引，点击权限设置触发 TodoStorage.openNotificationSettings', async () => {

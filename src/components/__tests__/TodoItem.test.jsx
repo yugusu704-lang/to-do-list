@@ -227,7 +227,25 @@ describe('TodoItem', () => {
       <TodoItem todo={baseTodo} onToggle={vi.fn()} onDelete={vi.fn()} isHighlighted={true} />
     );
 
-    expect(container.firstChild).toHaveClass('ring-amber-500');
+    expect(container.firstChild).toHaveClass('ring-orange-500');
+  });
+
+  test('极端紧急倒计时（今天截止）渲染实心暖橙药丸高亮样式', () => {
+    const today = new Date().toISOString();
+    const urgentTodo = {
+      id: 'urgent-1',
+      text: '紧急汇报',
+      completed: false,
+      isTimed: true,
+      dueAt: today,
+    };
+
+    render(<TodoItem todo={urgentTodo} onToggle={vi.fn()} onDelete={vi.fn()} />);
+
+    const badge = screen.getByText('今天截止');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveClass('bg-orange-500');
+    expect(badge).toHaveClass('text-white');
   });
 });
 
